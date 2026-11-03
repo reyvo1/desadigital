@@ -1348,7 +1348,7 @@ async function startServer() {
     const db = ensureDatabase();
     const matched = (db.adminUsers || []).find((u) => u.username.toLowerCase() === username);
 
-    if (!matched || !verifyPasswordScrypt(password, matched.passwordHash, matched.password)) {
+    if (!matched || matched.status === 'pending' || !verifyPasswordScrypt(password, matched.passwordHash, matched.password)) {
       res.status(401).json({
         status: 'error',
         error: 'Username atau kata sandi perangkat desa tidak sesuai.',
@@ -2195,9 +2195,7 @@ async function startServer() {
       if (pgAdapter) {
         const r = await pgAdapter.query('SELECT * FROM tenant_notification_settings WHERE tenant_id = $1 LIMIT 1', [tenantId]);
         if (r.rows && r.rows.length > 0) {
-          const row = { ...r.rows[0] };
-          if (row.client_secret) row.client_secret = '[SCRYPT_PROTECTED]';
-          return res.json({ settings: row });
+          return res.json({ settings: r.rows[0] });
         }
         // Seed default row
         await pgAdapter.query(
@@ -2206,9 +2204,7 @@ async function startServer() {
         );
         const r2 = await pgAdapter.query('SELECT * FROM tenant_notification_settings WHERE tenant_id = $1 LIMIT 1', [tenantId]);
         if (r2.rows && r2.rows.length > 0) {
-          const row = { ...r2.rows[0] };
-          if (row.client_secret) row.client_secret = '[SCRYPT_PROTECTED]';
-          return res.json({ settings: row });
+          return res.json({ settings: r2.rows[0] });
         }
       }
       res.json({
@@ -2294,14 +2290,18 @@ async function startServer() {
         const r = await pgAdapter.query('SELECT * FROM tenant_sso_settings WHERE tenant_id = $1 LIMIT 1', [tenantId]);
         if (r.rows && r.rows.length > 0) {
           const row = { ...r.rows[0] };
-          if (row.client_secret) row.client_secret = '[SCRYPT_PROTECTED]';
+          const hasSecret = !!row.client_secret;
+          delete row.client_secret;
+          row.hasSecret = hasSecret;
           return res.json({ settings: row });
         }
         await pgAdapter.query(`INSERT INTO tenant_sso_settings (tenant_id) VALUES ($1) ON CONFLICT (tenant_id) DO NOTHING`, [tenantId]);
         const r2 = await pgAdapter.query('SELECT * FROM tenant_sso_settings WHERE tenant_id = $1 LIMIT 1', [tenantId]);
         if (r2.rows && r2.rows.length > 0) {
           const row = { ...r2.rows[0] };
-          if (row.client_secret) row.client_secret = '[SCRYPT_PROTECTED]';
+          const hasSecret = !!row.client_secret;
+          delete row.client_secret;
+          row.hasSecret = hasSecret;
           return res.json({ settings: row });
         }
       }
@@ -2312,7 +2312,7 @@ async function startServer() {
           provider: null,
           issuer_url: null,
           client_id: null,
-          client_secret: null,
+          hasSecret: false,
           redirect_uri: null,
           scopes: null,
         },
@@ -2330,6 +2330,7 @@ async function startServer() {
     try {
       const tenantId = tenantStorage.getStore() || 'default';
       const { enabled, provider, issuer_url, client_id, client_secret, redirect_uri, scopes } = req.body || {};
+      const incomingSecret = (client_secret && client_secret !== '[SCRYPT_PROTECTED]' && String(client_secret).trim() !== '') ? client_secret : null;
       // Validate issuer_url: reject private IPs / metadata endpoints
       if (issuer_url) {
         try {
@@ -2363,7 +2364,7 @@ async function startServer() {
             provider || null,
             issuer_url || null,
             client_id || null,
-            client_secret || null,
+            incomingSecret,
             redirect_uri || null,
             scopes || null,
           ]
@@ -2640,12 +2641,14 @@ async function startServer() {
           id: `sso-${Date.now()}`,
           username,
           fullName,
-          role: 'Kasi Pelayanan (SSO)',
+          role: 'Menunggu Persetujuan (SSO)',
           passwordHash: hashPasswordScrypt('sso-idp-managed'),
           nip: userinfo.sub || 'SSO-IDP',
+          status: 'pending',
         } as any;
         db.adminUsers = [...(db.adminUsers || []), matched as any];
         await saveDatabase(db, 'adminUsers');
+        return res.status(202).send('Akun SSO dibuat, menunggu persetujuan administrator.');
       }
       const matchedUser = matched!;
 

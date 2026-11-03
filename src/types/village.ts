@@ -750,6 +750,7 @@ export interface AdminUser {
   role: string;
   nip?: string;
   mustChangePassword?: boolean;
+  status?: string;
   isPlatformAdmin?: boolean;
 }
 
