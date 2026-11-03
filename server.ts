@@ -2910,6 +2910,7 @@ async function startServer() {
       db.products = [newProduct, ...(db.products || [])];
       await saveDatabase(db, 'products');
       await pgAdapter.query(`UPDATE market_product_submissions SET status='approved', approved_product_id=$2, updated_at=NOW() WHERE id=$1`, [id, productId]);
+      recordAudit('market_submission_approve', 'admin', `Submission ${id} approved`);
       res.json({ status: 'ok', result: 'approved', product_id: productId });
     } catch (err: any) {
       res.status(500).json({ error: err?.message || 'Failed to process market submission' });
