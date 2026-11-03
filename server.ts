@@ -1617,6 +1617,47 @@ async function startServer() {
     return;
   });
 
+  const citizenOtpStore = new Map<string, { otp: string; expires: number; attempts: number }>();
+
+  app.post('/api/citizen/otp/request', loginRateLimiter, async (req, res) => {
+    const nik = String(req.body?.nik || '').trim();
+    if (!/^\d{16}$/.test(nik)) return res.status(400).json({ status: 'error', error: 'NIK harus 16 digit.' });
+    const citizen = await getCitizenByNik(nik);
+    if (!citizen) return res.status(404).json({ status: 'error', error: 'Data warga tidak ditemukan.' });
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    citizenOtpStore.set(nik, { otp, expires: Date.now() + 5 * 60 * 1000, attempts: 0 });
+    res.json({ status: 'ok', message: 'OTP dikirim (dev: lihat otp).', ...(process.env.NODE_ENV !== 'production' ? { otp } : {}) });
+  });
+
+  app.post('/api/citizen/otp/verify', loginRateLimiter, async (req, res) => {
+    const nik = String(req.body?.nik || '').trim();
+    const otp = String(req.body?.otp || '').trim();
+    const entry = citizenOtpStore.get(nik);
+    if (!entry || Date.now() > entry.expires) return res.status(401).json({ status: 'error', error: 'OTP tidak valid atau kadaluarsa.' });
+    entry.attempts += 1;
+    if (entry.attempts > 5) { citizenOtpStore.delete(nik); return res.status(429).json({ status: 'error', error: 'Terlalu banyak percobaan.' }); }
+    if (entry.otp !== otp) return res.status(401).json({ status: 'error', error: 'OTP salah.' });
+    citizenOtpStore.delete(nik);
+    const citizen = await getCitizenByNik(nik);
+    if (!citizen) return res.status(404).json({ status: 'error', error: 'Data warga tidak ditemukan.' });
+    const token = crypto.randomBytes(32).toString('hex');
+    const session = {
+      token,
+      tokenHash: hashTokenSha256(token),
+      username: nik,
+      fullName: (citizen as any).fullName || (citizen as any).name || 'Warga',
+      role: 'Warga',
+      roleTier: 'warga' as any,
+      nip: '',
+      tenantId: tenantStorage.getStore() || 'default',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + SESSION_TTL_MS,
+    };
+    activeSessions.set(token, session);
+    await persistSessionToPg(session);
+    res.json({ status: 'ok', token, user: { username: nik, fullName: session.fullName, roleTier: 'warga' } });
+  });
+
   app.get('/api/citizen/me', async (req, res) => {
     const token = extractBearerToken(req);
     if (!token) {
