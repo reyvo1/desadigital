@@ -3,6 +3,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { lookup } from 'node:dns/promises';
 import net from 'net';
 import { fileURLToPath } from 'url';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -2354,9 +2355,18 @@ async function startServer() {
           const u = new URL(String(issuer_url));
           const host = u.hostname.toLowerCase();
           if (!['http:', 'https:'].includes(u.protocol)) throw new Error('protocol');
+          if (process.env.NODE_ENV === 'production' && u.protocol !== 'https:') throw new Error('https');
           if (host === 'localhost' || host === '127.0.0.1' || host === '169.254.169.254' || host.startsWith('10.') || host.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
             return res.status(400).json({ status: 'error', error: 'issuer_url tidak boleh mengarah ke IP privat/metadata.' });
           }
+          // DNS rebinding guard: resolve and reject private IPs
+          try {
+            const resolved = await lookup(host);
+            const ip = resolved?.address || '';
+            if (ip === '127.0.0.1' || ip === '169.254.169.254' || ip.startsWith('10.') || ip.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[01])\./.test(ip)) {
+              return res.status(400).json({ status: 'error', error: 'issuer_url resolve ke IP privat/metadata.' });
+            }
+          } catch {}
         } catch {
           return res.status(400).json({ status: 'error', error: 'issuer_url tidak valid.' });
         }
