@@ -1203,14 +1203,18 @@ async function startServer() {
     if (tenantId !== 'default' && pgAdapter) {
       pgAdapter.query('SELECT status FROM tenants WHERE id = $1', [tenantId])
         .then((r) => {
-          const status = r.rows && r.rows[0] ? r.rows[0].status : null;
-          if (status !== 'active') {
-            res.status(403).json({ status: 'error', error: 'Tenant tidak aktif atau tidak ditemukan.' });
+          const row = r.rows && r.rows[0];
+          if (!row) {
+            res.status(404).json({ status: 'error', error: 'Tenant tidak ditemukan.' });
+            return;
+          }
+          if (row.status !== 'active') {
+            res.status(403).json({ status: 'error', error: 'Tenant suspended.' });
             return;
           }
           tenantStorage.run(tenantId, () => next());
         })
-        .catch(() => { tenantStorage.run(tenantId, () => next()); });
+        .catch(() => { res.status(404).json({ status: 'error', error: 'Tenant tidak ditemukan.' }); });
       return;
     }
     tenantStorage.run(tenantId, () => next());
