@@ -2598,6 +2598,7 @@ async function startServer() {
          VALUES ($1,$2,$3,$4,$5,'pending') RETURNING *`,
         [tenantId, channel, recipient, subject || null, message]
       );
+      recordAudit('notification_send', 'admin', `Kanal ${channel}`);
       res.status(201).json({ status: 'ok', item: r.rows?.[0] });
     } catch (err: any) {
       res.status(500).json({ error: err?.message || 'Failed to enqueue notification' });
@@ -2638,6 +2639,7 @@ async function startServer() {
         }
       }
       res.json({ status: 'ok', processed: (pending.rows || []).length, sent, failed, logged, gateway: (process.env.NOTIFICATION_WEBHOOK_URL || process.env.EMAIL_PROVIDER || process.env.WHATSAPP_PROVIDER) ? 'configured' : 'none (logged)' });
+      recordAudit('notification_dispatch', 'admin', `processed ${(pending.rows || []).length}`);
     } catch (err: any) {
       res.status(500).json({ error: err?.message || 'Failed to dispatch notifications' });
     }
