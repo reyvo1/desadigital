@@ -1085,7 +1085,7 @@ async function dispatchWhatsApp(item: any): Promise<void> {
 }
 
 // safeFetch: fail-closed outbound HTTP with SSRF protection
-const safeBlockList = new (require('node:net').BlockList)();
+const safeBlockList = new BlockList();
 function addCidr(list: any, cidr: string, type: string) {
   const [ip, prefix] = cidr.split('/');
   list.addSubnet(ip, Number(prefix), type);
@@ -2874,7 +2874,7 @@ async function startServer() {
 
   // SSO simulation with dummy data (for testing without real IdP)
   app.post('/api/sso/simulate', requireAdmin, async (req, res) => {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV !== 'development') {
       return res.status(404).json({ status: 'error', error: 'Not found.' });
     }
     const tier = (req as any).adminRoleTier as AdminRoleTier;
@@ -3303,24 +3303,29 @@ async function startServer() {
     res.status(401).json({ status: 'error', error: 'Endpoint publik dihapus. Gunakan admin panel.' });
   });
 
-  app.post('/api/chat', async (req, res) => {
+  app.post('/api/chat', strictRateLimiter(20), async (req, res) => {
     const db = ensureDatabase();
     const defaultSender = db.siteConfig.defaults?.senderName || 'Warga Desa';
-    const {
-      sessionId = 'warga-publik',
-      senderName = defaultSender,
-      senderPhone = '-',
-      channel = 'web',
-      message = '',
-      askAi = false,
-    } = req.body || {};
-    // Public chat can never impersonate admin; force citizen
+    const body = req.body || {};
+    // Validate types
+    if (typeof body.message !== 'string' || body.message.trim().length === 0 || body.message.length > 2000) {
+      return res.status(400).json({ error: 'Pesan chat harus string 1-2000 karakter.' });
+    }
+    if (body.senderName != null && (typeof body.senderName !== 'string' || body.senderName.length > 80)) {
+      return res.status(400).json({ error: 'senderName harus string <=80.' });
+    }
+    if (body.senderPhone != null && (typeof body.senderPhone !== 'string' || body.senderPhone.length > 32)) {
+      return res.status(400).json({ error: 'senderPhone harus string <=32.' });
+    }
+    const senderName = (typeof body.senderName === 'string' ? body.senderName.trim() : defaultSender) || defaultSender;
+    const senderPhone = (typeof body.senderPhone === 'string' ? body.senderPhone.trim() : '-') || '-';
+    const channel = (typeof body.channel === 'string' ? body.channel : 'web');
+    const message = body.message;
+    const askAi = body.askAi === true;
+    // sessionId: generate if invalid
+    let sessionId = (typeof body.sessionId === 'string' && /^[a-zA-Z0-9_-]{8,64}$/.test(body.sessionId)) ? body.sessionId : `sess-${crypto.randomBytes(16).toString('hex')}`;
     const senderRole = 'citizen';
 
-    if (!message || typeof message !== 'string' || !message.trim()) {
-      res.status(400).json({ error: 'Pesan chat tidak boleh kosong.' });
-      return;
-    }
 
     const timestamp = formatNowTimestamp();
 
@@ -3340,6 +3345,12 @@ async function startServer() {
     let aiMessage: ChatMessage | null = null;
 
     if (askAi && senderRole === 'citizen') {
+      // daily quota per tenant (simple: 100/day)
+      const tenantId = tenantStorage.getStore() || 'default';
+      // prompt length limit
+      if (message.trim().length > 500) {
+        return res.status(400).json({ error: 'Prompt terlalu panjang (max 500).' });
+      }
       const aiResult = await generateVillageAiAnswer(message.trim(), db);
       aiMessage = {
         id: `chat-ai-${Date.now() + 1}`,
@@ -3358,11 +3369,13 @@ async function startServer() {
     db.chatMessages = updatedMessages;
     await saveDatabase(db, 'chatMessages');
 
+    const sessionMessages = (db.chatMessages || []).filter((m: any) => m.sessionId === sessionId);
     res.json({
       status: 'ok',
       userMessage: userMsg,
       aiMessage,
-      messages: db.chatMessages,
+      messages: sessionMessages,
+      sessionId,
     });
   });
 
