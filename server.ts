@@ -1950,6 +1950,7 @@ async function startServer() {
       lastUpdated: new Date().toISOString(),
     };
     await saveDatabase(updatedDb);
+    recordAudit('full_put_db', 'admin', 'Full DB replace');
     res.json({ status: 'ok', lastUpdated: updatedDb.lastUpdated, version: updatedDb.version });
   });
 
