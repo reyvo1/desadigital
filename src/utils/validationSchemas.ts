@@ -114,7 +114,7 @@ export const CitizenItemSchema = z
     jenisKelamin: z.enum(['Laki-laki', 'Perempuan', 'L', 'P']).optional(),
     dusun: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const LetterRequestItemSchema = z
   .object({
@@ -133,7 +133,7 @@ export const LetterRequestItemSchema = z
     purpose: z.string().min(1),
     status: z.string().min(2),
   })
-  .passthrough();
+  .strict();
 
 export const SiteConfigSchema = z
   .object({
@@ -146,7 +146,7 @@ export const SiteConfigSchema = z
     headOfVillageName: z.string().min(2).optional(),
     kadesName: z.string().min(2).optional(),
   })
-  .passthrough();
+  .strict();
 
 export const HamletItemSchema = z
   .object({
@@ -154,7 +154,7 @@ export const HamletItemSchema = z
     name: z.string().min(1),
     headName: z.string().min(1).optional(),
   })
-  .passthrough();
+  .strict();
 
 export const FacilityItemSchema = z
   .object({
@@ -162,7 +162,7 @@ export const FacilityItemSchema = z
     name: z.string().min(1),
     category: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const LetterTypeItemSchema = z
   .object({
@@ -171,7 +171,7 @@ export const LetterTypeItemSchema = z
     estimatedHours: z.number().nonnegative().optional(),
     requirements: z.array(z.string()).optional(),
   })
-  .passthrough();
+  .strict();
 
 export const AdminUserItemSchema = z
   .object({
@@ -182,7 +182,7 @@ export const AdminUserItemSchema = z
     password: z.string().optional(),
     passwordHash: z.string().optional(),
   })
-  .passthrough();
+  .strict();
 
 export const AgendaItemSchema = z
   .object({
@@ -190,7 +190,7 @@ export const AgendaItemSchema = z
     title: z.string().min(1),
     date: z.string().min(4),
   })
-  .passthrough();
+  .strict();
 
 export const ApbdesItemSchema = z
   .object({
@@ -203,7 +203,7 @@ export const ApbdesItemSchema = z
     realisasi: z.number().nonnegative().optional(),
     realized: z.number().nonnegative().optional(),
   })
-  .passthrough();
+  .strict();
 
 export const NewsItemSchema = z
   .object({
@@ -211,7 +211,7 @@ export const NewsItemSchema = z
     title: z.string().min(1),
     category: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const GalleryItemSchema = z
   .object({
@@ -219,7 +219,7 @@ export const GalleryItemSchema = z
     title: z.string().min(1),
     category: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const ProductItemSchema = z
   .object({
@@ -228,7 +228,7 @@ export const ProductItemSchema = z
     category: z.string().min(1),
     price: z.number().nonnegative(),
   })
-  .passthrough();
+  .strict();
 
 export const OfficialItemSchema = z
   .object({
@@ -237,7 +237,7 @@ export const OfficialItemSchema = z
     role: z.string().min(1).optional(),
     position: z.string().min(1).optional(),
   })
-  .passthrough();
+  .strict();
 
 export const RegulationItemSchema = z
   .object({
@@ -245,7 +245,7 @@ export const RegulationItemSchema = z
     title: z.string().min(1),
     year: z.union([z.number().int(), z.string()]).optional(),
   })
-  .passthrough();
+  .strict();
 
 export const AspirationItemSchema = z
   .object({
@@ -257,7 +257,7 @@ export const AspirationItemSchema = z
     message: z.string().min(1).optional(),
     content: z.string().min(1).optional(),
   })
-  .passthrough();
+  .strict();
 
 export const PotentialItemSchema = z
   .object({
@@ -266,7 +266,7 @@ export const PotentialItemSchema = z
     name: z.string().min(1).optional(),
     category: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const ProjectItemSchema = z
   .object({
@@ -275,7 +275,7 @@ export const ProjectItemSchema = z
     name: z.string().min(1).optional(),
     budget: z.number().nonnegative(),
   })
-  .passthrough();
+  .strict();
 
 export const InstitutionItemSchema = z
   .object({
@@ -283,7 +283,7 @@ export const InstitutionItemSchema = z
     name: z.string().min(1),
     abbreviation: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const MediaAssetItemSchema = z
   .object({
@@ -293,7 +293,7 @@ export const MediaAssetItemSchema = z
     domain: z.string().min(1).optional(),
     dataUrl: z.string().min(5),
   })
-  .passthrough();
+  .strict();
 
 export const AuditLogItemSchema = z
   .object({
@@ -301,7 +301,7 @@ export const AuditLogItemSchema = z
     actor: z.string().min(1),
     action: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const ChatMessageItemSchema = z
   .object({
@@ -310,7 +310,7 @@ export const ChatMessageItemSchema = z
     senderName: z.string().min(1),
     message: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const MailLogItemSchema = z
   .object({
@@ -319,7 +319,7 @@ export const MailLogItemSchema = z
     mailType: z.enum(['Surat Masuk', 'Surat Keluar']).optional(),
     subject: z.string().min(1),
   })
-  .passthrough();
+  .strict();
 
 export const VillageAssetItemSchema = z
   .object({
@@ -328,7 +328,7 @@ export const VillageAssetItemSchema = z
     name: z.string().min(1).optional(),
     assetName: z.string().min(1).optional(),
   })
-  .passthrough();
+  .strict();
 
 export const PopulationMutationItemSchema = z
   .object({
@@ -347,7 +347,7 @@ export const PopulationMutationItemSchema = z
       'Datang Masuk',
     ]),
   })
-  .passthrough();
+  .strict();
 
 export const DOMAIN_ZOD_SCHEMAS: Record<keyof Omit<VillageDatabase, 'version' | 'lastUpdated'>, z.ZodTypeAny> = {
   siteConfig: SiteConfigSchema,
@@ -413,4 +413,4 @@ export const FullVillageDatabaseSchema = z
     villageAssets: z.array(VillageAssetItemSchema).optional(),
     populationMutations: z.array(PopulationMutationItemSchema).optional(),
   })
-  .passthrough();
+  .strict();
