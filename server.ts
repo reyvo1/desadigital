@@ -1770,6 +1770,7 @@ async function startServer() {
     db.requests = [serverReq, ...(db.requests || [])];
     db.version = (db.version || 8) + 1;
     await saveDatabase(db, 'requests');
+    recordAudit('public_request', 'warga', `Permohonan surat ${serverReq.trackingCode}`);
     res.json({ status: 'ok', request: serverReq, version: db.version });
   });
 
@@ -1869,6 +1870,7 @@ async function startServer() {
 
     db.version = (db.version || 8) + 1;
     await saveDatabase(db);
+    recordAudit('public_market_order', 'warga', `Pesanan ${newOrder.orderCode}`);
 
     res.json({
       status: 'ok',
@@ -2029,6 +2031,7 @@ async function startServer() {
 
     currentDb.version = (currentDb.version || 8) + 1;
     await saveDatabase(currentDb, typedDomain);
+    recordAudit(`patch_${typedDomain}`, 'admin', `PATCH domain ${typedDomain}`);
 
     res.json({
       status: 'ok',
