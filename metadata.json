@@ -1,0 +1,9 @@
+{
+  "name": "Portal Desa Digital & Layanan Mandiri",
+  "description": "Website resmi desa modern dengan layanan surat menyurat online, sistem manajemen data penduduk aman, statistik real-time, lapak desa, dan galeri kegiatan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
+

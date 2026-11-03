@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: desa1_db
+      POSTGRES_USER: desa1_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ganti_password_kuat}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://desa1_user:${DB_PASSWORD:-ganti_password_kuat}@db:5432/desa1_db
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-desa2026}
+      AUTO_BACKUP_HOURS: ${AUTO_BACKUP_HOURS:-24}
+    ports:
+      - "3000:3000"
+    volumes:
+      - appdata:/app/data
+
+volumes:
+  pgdata:
+  appdata:
