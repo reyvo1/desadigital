@@ -742,12 +742,14 @@ export interface AuditLog {
 }
 
 export interface AdminUser {
+  id?: string;
   username: string;
   password?: string;
   passwordHash?: string;
   fullName: string;
   role: string;
-  nip: string;
+  nip?: string;
+  mustChangePassword?: boolean;
   isPlatformAdmin?: boolean;
 }
 

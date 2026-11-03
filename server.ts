@@ -1369,7 +1369,7 @@ async function startServer() {
       fullName: matched.fullName,
       role: matched.role,
       roleTier,
-      nip: matched.nip,
+      nip: matched.nip || '',
       isPlatformAdmin,
       tenantId,
       createdAt: now,
@@ -1388,9 +1388,10 @@ async function startServer() {
         username: matched.username,
         fullName: matched.fullName,
         role: matched.role,
-        nip: matched.nip,
+        nip: matched.nip || '',
         isPlatformAdmin,
-      },
+        mustChangePassword: matched.mustChangePassword || false,
+        },
     });
   });
 
@@ -1446,7 +1447,7 @@ async function startServer() {
     const matched = (db.adminUsers || []).find(
       (u) =>
         u.username.toLowerCase() === username.toLowerCase() &&
-        u.nip.replace(/\s+/g, '') === nip.replace(/\s+/g, '')
+        (u.nip || '').replace(/\s+/g, '') === nip.replace(/\s+/g, '')
     );
 
     // Respons generik (cegah enumerasi), tidak pernah memuat token
@@ -2037,9 +2038,46 @@ async function startServer() {
       const tenantFile = path.join(DATA_DIR, `village-db-${id}.json`);
       if (!fs.existsSync(tenantFile)) {
         const initial = createInitialDatabase();
+        // Kosongkan data demo
+        initial.citizens = [];
+        initial.news = [];
+        initial.requests = [];
+        initial.agendas = [];
+        initial.gallery = [];
+        initial.products = [];
+        initial.aspirations = [];
+        initial.potentials = [];
+        initial.projects = [];
+        // Satu akun super_admin dengan sandi acak sekali pakai
+        const oneTimePassword = crypto.randomBytes(12).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
+        const hashed = hashPasswordScrypt(oneTimePassword);
+        initial.adminUsers = [{
+          id: `admin-${id}`,
+          username: 'admin',
+          fullName: `Administrator ${name}`,
+          role: 'Sekretaris Desa / Super Admin SID',
+          nip: '',
+          passwordHash: hashed,
+          mustChangePassword: true,
+        } as any];
         const normInitial = normalizeAdminUsers(initial.adminUsers || []);
         initial.adminUsers = normInitial.users;
         fs.writeFileSync(tenantFile, JSON.stringify(initial, null, 2), 'utf-8');
+        if (pgAdapter) {
+          try {
+            await pgAdapter.query(
+              `INSERT INTO village_database (tenant_id, data, updated_at)
+               VALUES ($1, $2::jsonb, NOW())
+               ON CONFLICT (tenant_id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW();`,
+              [id, JSON.stringify(initial)]
+            );
+          } catch (e) {
+            console.error('tenant village_database sync failed:', e?.message);
+          }
+        }
+        cachedDbMemory.set(id, initial);
+        res.json({ status: 'ok', tenant: { id, slug, name }, oneTimePassword });
+        return;
       }
       res.json({ status: 'ok', tenant: { id, slug, name } });
     } catch (err: any) {
@@ -2621,7 +2659,7 @@ async function startServer() {
         fullName: matchedUser.fullName,
         role: matchedUser.role,
         roleTier,
-        nip: matchedUser.nip,
+        nip: matchedUser.nip || '',
         isPlatformAdmin,
         tenantId: tenantStorage.getStore() || 'default',
         createdAt: now,
@@ -2679,7 +2717,7 @@ async function startServer() {
         fullName: matchedUser.fullName,
         role: matchedUser.role,
         roleTier,
-        nip: matchedUser.nip,
+        nip: matchedUser.nip || '',
         isPlatformAdmin,
         createdAt: now,
         expiresAt: now + SESSION_TTL_MS,
@@ -2692,7 +2730,7 @@ async function startServer() {
         token,
         roleTier,
         expiresAt: new Date(session.expiresAt).toISOString(),
-        user: { username: matchedUser.username, fullName: matchedUser.fullName, role: matchedUser.role, nip: matchedUser.nip, isPlatformAdmin },
+        user: { username: matchedUser.username, fullName: matchedUser.fullName, role: matchedUser.role, nip: matchedUser.nip || '', isPlatformAdmin },
       });
     } catch (err: any) {
       res.status(500).json({ error: err?.message || 'SSO simulation failed' });
