@@ -775,7 +775,8 @@ function createBackupSnapshot(label = 'manual'): { filename: string; path: strin
   }
   const db = ensureDatabase();
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `village-backup-${label}-${ts}.json`;
+  const tenantId = tenantStorage.getStore() || 'default';
+  const filename = `village-backup-${tenantId}-${label}-${ts}.json`;
   const targetPath = path.join(BACKUP_DIR, filename);
   const raw = JSON.stringify(db, null, 2);
   fs.writeFileSync(targetPath, raw, 'utf-8');
@@ -1382,8 +1383,12 @@ async function startServer() {
   });
 
   app.use('/api', apiRateLimiter);
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  // Body size limits
+  app.use('/api/db/restore', express.json({ limit: '50mb' }));
+  app.use('/api/public', express.json({ limit: '1mb' }));
+  app.use('/api/chat', express.json({ limit: '1mb' }));
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // ==========================================================================
   // 0. HEALTH, AUTH, TOKEN ROTATION & PASSWORD RESET ENDPOINTS
@@ -2059,6 +2064,15 @@ async function startServer() {
         issues: parsed.error.issues,
       });
       return;
+    }
+    // Reject placeholder password hashes
+    const incoming = parsed.data as any;
+    if (Array.isArray(incoming?.adminUsers)) {
+      for (const u of incoming.adminUsers) {
+        if (u?.passwordHash === '[SCRYPT_PROTECTED]') {
+          return res.status(400).json({ status: 'error', error: 'adminUsers mengandung placeholder [SCRYPT_PROTECTED]. Gunakan hash nyata.' });
+        }
+      }
     }
 
     const currentDb = ensureDatabase();
@@ -3303,7 +3317,8 @@ async function startServer() {
     res.status(401).json({ status: 'error', error: 'Endpoint publik dihapus. Gunakan admin panel.' });
   });
 
-  app.post('/api/chat', strictRateLimiter(20), async (req, res) => {
+  const aiQuotaStore = new Map<string, { date: string; count: number }>();
+app.post('/api/chat', strictRateLimiter(20), async (req, res) => {
     const db = ensureDatabase();
     const defaultSender = db.siteConfig.defaults?.senderName || 'Warga Desa';
     const body = req.body || {};
@@ -3345,8 +3360,15 @@ async function startServer() {
     let aiMessage: ChatMessage | null = null;
 
     if (askAi && senderRole === 'citizen') {
-      // daily quota per tenant (simple: 100/day)
       const tenantId = tenantStorage.getStore() || 'default';
+      const today = new Date().toISOString().slice(0,10);
+      const q = aiQuotaStore.get(tenantId) || { date: today, count: 0 };
+      if (q.date !== today) { q.date = today; q.count = 0; }
+      if (q.count >= 100) {
+        return res.status(429).json({ error: 'Kuota AI harian tenant tercapai.' });
+      }
+      q.count += 1;
+      aiQuotaStore.set(tenantId, q);
       // prompt length limit
       if (message.trim().length > 500) {
         return res.status(400).json({ error: 'Prompt terlalu panjang (max 500).' });
@@ -3394,6 +3416,18 @@ async function startServer() {
       res.status(400).json({ error: 'Prompt pertanyaan wajib diisi.' });
       return;
     }
+    if (prompt.length > 500) {
+      return res.status(400).json({ error: 'Prompt terlalu panjang (max 500).' });
+    }
+    const tenantId = tenantStorage.getStore() || 'default';
+    const today = new Date().toISOString().slice(0,10);
+    const q = aiQuotaStore.get(tenantId + ':ai') || { date: today, count: 0 };
+    if (q.date !== today) { q.date = today; q.count = 0; }
+    if (q.count >= 100) {
+      return res.status(429).json({ error: 'Kuota AI harian tenant tercapai.' });
+    }
+    q.count += 1;
+    aiQuotaStore.set(tenantId + ':ai', q);
     const db = ensureDatabase();
     const result = await generateVillageAiAnswer(prompt, db);
     res.json({
