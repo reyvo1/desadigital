@@ -2161,6 +2161,7 @@ async function startServer() {
           }
         }
         cachedDbMemory.set(id, initial);
+        recordAudit('tenant_create', 'platform', `Tenant ${id} dibuat`);
         res.json({ status: 'ok', tenant: { id, slug, name }, oneTimePassword });
         return;
       }
