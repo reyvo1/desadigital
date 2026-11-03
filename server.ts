@@ -1082,6 +1082,28 @@ async function dispatchWhatsApp(item: any): Promise<void> {
 }
 
 async function startServer() {
+  // Multi-instance guard (production): enforce single instance unless MAX_INSTANCES>1
+  if (process.env.NODE_ENV === 'production') {
+    const maxInstances = parseInt(process.env.MAX_INSTANCES || '1', 10);
+    if (maxInstances <= 1) {
+      const lockFile = path.join(DATA_DIR, '.instance.lock');
+      try {
+        if (fs.existsSync(lockFile)) {
+          const pid = parseInt(fs.readFileSync(lockFile, 'utf-8').trim(), 10);
+          if (pid && !isNaN(pid)) {
+            try { process.kill(pid, 0); throw new Error(`Another instance is running (PID ${pid}).`); } catch (e: any) {
+              if (e.code !== 'ESRCH') throw e;
+            }
+          }
+        }
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+        fs.writeFileSync(lockFile, String(process.pid), 'utf-8');
+        process.on('exit', () => { try { fs.unlinkSync(lockFile); } catch {} });
+      } catch (e: any) {
+        throw new Error(`[CRITICAL] Multi-instance guard failed: ${e?.message}`);
+      }
+    }
+  }
   const app = express();
   app.set('trust proxy', 1);
 
