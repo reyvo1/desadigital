@@ -241,14 +241,30 @@ export default function App() {
       const token = adminToken || localStorage.getItem('sid_desa_admin_token') || '';
       if (!token) return;
       try {
-        await fetch(`/api/db/${domain}`, {
+        // Ambil versi terbaru untuk If-Match (hindari 409 terus-menerus karena pengajuan publik menaikkan versi)
+        let version: string | null = null;
+        try {
+          const vr = await fetch('/api/db');
+          if (vr.ok) {
+            const vd = await vr.json();
+            version = vd?.version != null ? String(vd.version) : null;
+          }
+        } catch {}
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        };
+        if (version) headers['If-Match'] = version;
+        const res = await fetch(`/api/db/${domain}`, {
           method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+          headers,
           body: JSON.stringify({ data }),
         });
+        if (res.status === 409) {
+          // Muat ulang data terbaru, jangan kehilangan perubahan diam-diam
+          console.warn('Konflik versi (409). Memuat ulang data terbaru.');
+          window.location.reload();
+        }
       } catch {
         // Offline / static fallback remains in localStorage
       }
