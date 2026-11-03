@@ -340,6 +340,7 @@ export const ServicesView: React.FC<ServicesViewProps> = ({
           <span>Katalog Surat ({activeLetterTypes.length}) & Antrean</span>
         </button>
 
+        {false && (
         <button
           onClick={() => setActiveSubView('cek_nik')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center space-x-2 transition cursor-pointer ${
@@ -351,6 +352,7 @@ export const ServicesView: React.FC<ServicesViewProps> = ({
           <UserCheck className="w-4 h-4" />
           <span>Cek NIK Satu Pintu (Surat, Bansos, TPS & Dusun)</span>
         </button>
+        )}
 
         <button
           onClick={() => setActiveSubView('anjungan')}

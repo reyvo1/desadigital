@@ -254,7 +254,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {/* Citizen Portal Login */}
-            {!adminUser && (
+            {false && (
               <button
                 onClick={onOpenCitizenLogin}
                 className="hidden sm:inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 dark:bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-colors cursor-pointer whitespace-nowrap"
