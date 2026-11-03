@@ -3,6 +3,9 @@ import express, { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import https from 'https';
+import http from 'http';
+import { BlockList, isIP } from 'node:net';
 import { lookup } from 'node:dns/promises';
 import net from 'net';
 import { fileURLToPath } from 'url';
@@ -986,7 +989,7 @@ async function dispatchEmail(item: any): Promise<void> {
   const p = (process.env.EMAIL_PROVIDER || '').toLowerCase();
   const webhookUrl = (process.env.NOTIFICATION_WEBHOOK_URL || '').trim();
   if (p === 'sendgrid' && process.env.SENDGRID_API_KEY) {
-    const resp = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const resp = await safeFetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.SENDGRID_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1000,7 +1003,7 @@ async function dispatchEmail(item: any): Promise<void> {
     return;
   }
   if (p === 'resend' && process.env.RESEND_API_KEY) {
-    const resp = await fetch('https://api.resend.com/emails', {
+    const resp = await safeFetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1019,7 +1022,7 @@ async function dispatchEmail(item: any): Promise<void> {
     form.set('to', item.recipient);
     form.set('subject', item.subject || 'Notification');
     form.set('text', item.message);
-    const resp = await fetch(`https://api.mailgun.net/v3/${process.env.MAILGUN_DOMAIN}/messages`, {
+    const resp = await safeFetch(`https://api.mailgun.net/v3/${process.env.MAILGUN_DOMAIN}/messages`, {
       method: 'POST',
       headers: { Authorization: `Basic ${Buffer.from('api:' + process.env.MAILGUN_API_KEY).toString('base64')}` },
       body: form,
@@ -1028,7 +1031,7 @@ async function dispatchEmail(item: any): Promise<void> {
     return;
   }
   if (webhookUrl) {
-    const resp = await fetch(webhookUrl, {
+    const resp = await safeFetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tenant_id: item.tenant_id, channel: 'email', recipient: item.recipient, subject: item.subject, message: item.message }),
@@ -1047,7 +1050,7 @@ async function dispatchWhatsApp(item: any): Promise<void> {
     form.set('To', `whatsapp:${item.recipient}`);
     form.set('From', `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`);
     form.set('Body', item.message);
-    const resp = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`, {
+    const resp = await safeFetch(`https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`, {
       method: 'POST',
       headers: { Authorization: `Basic ${Buffer.from(process.env.TWILIO_ACCOUNT_SID + ':' + process.env.TWILIO_AUTH_TOKEN).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form,
@@ -1056,7 +1059,7 @@ async function dispatchWhatsApp(item: any): Promise<void> {
     return;
   }
   if (p === 'meta' && process.env.META_WHATSAPP_TOKEN && process.env.META_WHATSAPP_PHONE_NUMBER_ID) {
-    const resp = await fetch(`https://graph.facebook.com/v18.0/${process.env.META_WHATSAPP_PHONE_NUMBER_ID}/messages`, {
+    const resp = await safeFetch(`https://graph.facebook.com/v18.0/${process.env.META_WHATSAPP_PHONE_NUMBER_ID}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.META_WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1070,7 +1073,7 @@ async function dispatchWhatsApp(item: any): Promise<void> {
     return;
   }
   if (webhookUrl) {
-    const resp = await fetch(webhookUrl, {
+    const resp = await safeFetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tenant_id: item.tenant_id, channel: 'whatsapp', recipient: item.recipient, message: item.message }),
@@ -1079,6 +1082,100 @@ async function dispatchWhatsApp(item: any): Promise<void> {
     return;
   }
   throw new Error('No WhatsApp provider configured');
+}
+
+// safeFetch: fail-closed outbound HTTP with SSRF protection
+const safeBlockList = new (require('node:net').BlockList)();
+function addCidr(list: any, cidr: string, type: string) {
+  const [ip, prefix] = cidr.split('/');
+  list.addSubnet(ip, Number(prefix), type);
+}
+[
+  '0.0.0.0/8','10.0.0.0/8','100.64.0.0/10','127.0.0.0/8','169.254.0.0/16',
+  '172.16.0.0/12','192.0.0.0/24','192.168.0.0/16','198.18.0.0/15','224.0.0.0/4','240.0.0.0/4',
+].forEach((c) => addCidr(safeBlockList, c, 'ipv4'));
+[
+  '::/128','::1/128','fc00::/7','fe80::/10','ff00::/8','::ffff:0:0/96',
+].forEach((c) => addCidr(safeBlockList, c, 'ipv6'));
+
+function isBlockedIp(ip: string) {
+  const fam = isIP(ip);
+  if (fam === 4) return safeBlockList.check(ip, 'ipv4');
+  if (fam === 6) return safeBlockList.check(ip, 'ipv6');
+  return true;
+}
+
+async function resolveAndValidate(host: string) {
+  if (isIP(host)) {
+    if (isBlockedIp(host)) throw new Error('Blocked IP');
+    return { ip: host, family: isIP(host) };
+  }
+  let addrs;
+  try {
+    addrs = await lookup(host, { all: true, verbatim: true });
+  } catch {
+    throw new Error('DNS lookup failed');
+  }
+  if (!Array.isArray(addrs) || addrs.length === 0) throw new Error('DNS no results');
+  for (const a of addrs) {
+    if (isBlockedIp(a.address)) throw new Error('Blocked IP');
+  }
+  return { ip: addrs[0].address, family: addrs[0].family };
+}
+
+async function safeFetch(rawUrl: any, opts: any = {}, redirects = 0): Promise<any> {
+  if (redirects > 3) throw new Error('Too many redirects');
+  const u = new URL(rawUrl);
+  if (u.username || u.password) throw new Error('Credentials in URL');
+  const isProd = process.env.NODE_ENV === 'production';
+  if (isProd && u.protocol !== 'https:') throw new Error('HTTPS required');
+  if (!['http:', 'https:'].includes(u.protocol)) throw new Error('Bad protocol');
+  const port = u.port ? Number(u.port) : (u.protocol === 'https:' ? 443 : 80);
+  if (![80, 443].includes(port)) throw new Error('Non-standard port');
+  const { ip, family } = await resolveAndValidate(u.hostname);
+  const mod = u.protocol === 'https:' ? https : http;
+  return await new Promise((resolve, reject) => {
+    const reqOpts = {
+      protocol: u.protocol,
+      hostname: u.hostname,
+      port,
+      path: u.pathname + u.search,
+      method: opts.method || 'GET',
+      headers: { ...(opts.headers || {}), Host: u.host },
+      servername: u.hostname,
+      lookup: (_hostname: string, _options: any, cb: any) => cb(null, ip, family),
+      timeout: 5000,
+    };
+    const req = mod.request(reqOpts, (res) => {
+      const chunks: Buffer[] = [];
+      let size = 0;
+      res.on('data', (c) => {
+        size += c.length;
+        if (size > 1024 * 1024) { req.destroy(new Error('Response too large')); return; }
+        chunks.push(c);
+      });
+      res.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        const status = res.statusCode || 0;
+        if (status >= 300 && status < 400 && res.headers.location) {
+          const next = new URL(res.headers.location, u).toString();
+          resolve(safeFetch(next, opts, redirects + 1));
+          return;
+        }
+        resolve({
+          ok: status >= 200 && status < 300,
+          status,
+          async text() { return body; },
+          async json() { return JSON.parse(body); },
+          headers: res.headers,
+        });
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error('Timeout')));
+    req.on('error', (e) => reject(e));
+    if (opts.body) req.write(opts.body);
+    req.end();
+  });
 }
 
 async function startServer() {
@@ -2700,7 +2797,7 @@ async function startServer() {
       const redirectUri = settings.redirect_uri || `${req.protocol}://${req.get('host')}/api/sso/callback`;
 
       // Token exchange
-      const tokenResp = await fetch(`${issuer}/token`, {
+      const tokenResp = await safeFetch(`${issuer}/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
@@ -2720,7 +2817,7 @@ async function startServer() {
       if (!accessToken) return res.status(400).send('No access_token from IdP.');
 
       // Userinfo
-      const uiResp = await fetch(`${issuer}/userinfo`, {
+      const uiResp = await safeFetch(`${issuer}/userinfo`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const userinfo = uiResp.ok ? await uiResp.json() : {};
@@ -3409,7 +3506,7 @@ async function startServer() {
     }
 
     try {
-      const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      const tgRes: any = await safeFetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3475,12 +3572,11 @@ async function startServer() {
     const expectedSecret = (process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
     const providedSecret = String(req.headers['x-telegram-bot-api-secret-token'] || '').trim();
 
-    if (expectedSecret && providedSecret !== expectedSecret) {
-      res.status(401).json({
-        status: 'error',
-        error: 'Unauthorized: Header X-Telegram-Bot-Api-Secret-Token tidak sesuai dengan TELEGRAM_WEBHOOK_SECRET.',
-      });
-      return;
+    if (!expectedSecret) {
+      return res.status(503).json({ status: 'error', error: 'TELEGRAM_WEBHOOK_SECRET wajib diset.' });
+    }
+    if (!providedSecret || providedSecret.length !== expectedSecret.length || !crypto.timingSafeEqual(Buffer.from(expectedSecret), Buffer.from(providedSecret))) {
+      return res.status(401).json({ status: 'error', error: 'Unauthorized.' });
     }
 
     const update = req.body || {};
@@ -3560,7 +3656,7 @@ async function startServer() {
       let sentMsgId: number | undefined;
       if (botToken) {
         try {
-          const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          const tgRes: any = await safeFetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -3640,7 +3736,7 @@ async function startServer() {
 
     if (botToken) {
       try {
-        const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        const tgRes: any = await safeFetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3720,7 +3816,7 @@ async function startServer() {
         payload.secret_token = secretToken;
       }
 
-      const tgRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+      const tgRes: any = await safeFetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -3984,6 +4080,19 @@ async function startServer() {
     }, intervalMs).unref();
     console.log(`[AutoBackup] Scheduled every ${autoBackupHours} hour(s).`);
   }
+
+  // Global error handler
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    console.error('Unhandled error:', err?.message || err);
+    if (!res.headersSent) res.status(500).json({ status: 'error', error: 'Internal server error' });
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    console.error('unhandledRejection:', reason);
+  });
+  process.on('uncaughtException', (err) => {
+    console.error('uncaughtException:', err?.message || err);
+  });
 
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server Database & Portal Desa berjalan di http://0.0.0.0:${PORT}`);
