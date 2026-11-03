@@ -720,7 +720,7 @@ export function ensureDatabase(): VillageDatabase {
   }
 }
 
-export function saveDatabase(db: VillageDatabase, changedDomain?: string): void {
+export async function saveDatabase(db: VillageDatabase, changedDomain?: string): Promise<void> {
   const isProd = process.env.NODE_ENV === 'production';
   if (isProd && !pgAvailable) {
     throw new Error(
@@ -732,6 +732,28 @@ export function saveDatabase(db: VillageDatabase, changedDomain?: string): void 
   const norm = normalizeAdminUsers(db.adminUsers || []);
   db.adminUsers = norm.users;
   const tenantId = tenantStorage.getStore() || 'default';
+
+  // Write-through: PG first
+  if (pgAvailable && pgAdapter) {
+    try {
+      if (changedDomain && changedDomain in MIGRATOR_DOMAIN_MAP) {
+        await syncSingleDomainToPg(
+          pgAdapter,
+          changedDomain as keyof Omit<VillageDatabase, 'version' | 'lastUpdated'>,
+          (db as any)[changedDomain],
+          db,
+          tenantId
+        );
+      } else {
+        await syncFullDatabaseToPg(pgAdapter, db, tenantId);
+      }
+    } catch (err: any) {
+      pgLastError = err?.message || 'Transaction error';
+      throw new Error(`[CRITICAL] Gagal menulis ke PostgreSQL: ${pgLastError}`);
+    }
+  }
+
+  // Only update cache/file after PG success
   cachedDbMemory.set(tenantId, db);
 
   if (!isProd) {
@@ -740,25 +762,6 @@ export function saveDatabase(db: VillageDatabase, changedDomain?: string): void 
     }
     const tenantFile = path.join(DATA_DIR, `village-db-${tenantId}.json`);
     fs.writeFileSync(tenantFile, JSON.stringify(db, null, 2), 'utf-8');
-  }
-
-  if (pgAvailable && pgAdapter) {
-    const tenantId = tenantStorage.getStore() || 'default';
-    if (changedDomain && changedDomain in MIGRATOR_DOMAIN_MAP) {
-      syncSingleDomainToPg(
-        pgAdapter,
-        changedDomain as keyof Omit<VillageDatabase, 'version' | 'lastUpdated'>,
-        (db as any)[changedDomain],
-        db,
-        tenantId
-      ).catch((err) => {
-        pgLastError = err?.message || 'Transaction error';
-      });
-    } else {
-      syncFullDatabaseToPg(pgAdapter, db, tenantId).catch((err) => {
-        pgLastError = err?.message || 'Transaction error';
-      });
-    }
   }
 }
 
@@ -1101,7 +1104,7 @@ async function startServer() {
     next();
   });
 
-  app.get('/metrics', (_req, res) => {
+  app.get('/metrics', async (_req, res) => {
     const lines: string[] = [];
     lines.push('# HELP http_requests_total Total HTTP requests');
     lines.push('# TYPE http_requests_total counter');
@@ -1262,7 +1265,7 @@ async function startServer() {
   // 0. HEALTH, AUTH, TOKEN ROTATION & PASSWORD RESET ENDPOINTS
   // ==========================================================================
   const trackCodeAttempts = new Map<string, { count: number; reset: number }>();
-  app.get('/api/public/track-letter', strictRateLimiter(20), (req, res) => {
+  app.get('/api/public/track-letter', strictRateLimiter(20), async (req, res) => {
     const code = String(req.query.code || '').trim();
     if (!code) {
       return res.status(400).json({ status: 'error', error: 'Kode lacak wajib diisi.' });
@@ -1294,7 +1297,7 @@ async function startServer() {
       },
     });
   });
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', async (_req, res) => {
     const tenantId = tenantStorage.getStore() || 'default';
     const db = cachedDbMemory.get(tenantId) || ensureDatabase();
     const alerts: string[] = [];
@@ -1572,7 +1575,7 @@ async function startServer() {
     delete adminUsersList[userIdx].password;
     db.adminUsers = adminUsersList;
     db.version = (db.version || 8) + 1;
-    saveDatabase(db, 'adminUsers');
+    await saveDatabase(db, 'adminUsers');
 
     // Revoke all existing active sessions for this user
     for (const [tok, sess] of activeSessions.entries()) {
@@ -1736,7 +1739,7 @@ async function startServer() {
   });
 
   // Public citizen submission endpoints (validated with Zod)
-  app.post('/api/public/requests', (req, res) => {
+  app.post('/api/public/requests', async (req, res) => {
     const parsed = PublicRequestSubmissionSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -1762,11 +1765,11 @@ async function startServer() {
     } as any;
     db.requests = [serverReq, ...(db.requests || [])];
     db.version = (db.version || 8) + 1;
-    saveDatabase(db, 'requests');
+    await saveDatabase(db, 'requests');
     res.json({ status: 'ok', request: serverReq, version: db.version });
   });
 
-  app.post('/api/public/aspirations', (req, res) => {
+  app.post('/api/public/aspirations', async (req, res) => {
     const parsed = PublicAspirationSubmissionSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -1780,18 +1783,18 @@ async function startServer() {
     const db = ensureDatabase();
     db.aspirations = [newAsp, ...(db.aspirations || []).filter((a) => a.id !== newAsp.id)];
     db.version = (db.version || 8) + 1;
-    saveDatabase(db, 'aspirations');
+    await saveDatabase(db, 'aspirations');
     res.json({ status: 'ok', aspiration: newAsp, version: db.version });
   });
 
   // Public: Portal Cek Mandiri Warga ("Cek NIK Satu Pintu") — Live Server Database Lookup
-  app.post('/api/public/cek-nik', (req, res) => {
+  app.post('/api/public/cek-nik', async (req, res) => {
     res.status(410).json({ status: 'error', error: 'Fitur Cek NIK Satu Pintu dimatikan untuk keamanan. Hubungi petugas desa.' });
     return;
   });
 
   // Public: Pasar UMKM Desa Collective Shopping Cart Checkout (Persisted in Server DB)
-  app.post('/api/public/market-orders', (req, res) => {
+  app.post('/api/public/market-orders', async (req, res) => {
     const orderInput = req.body?.order as MarketCollectiveOrder | undefined;
     if (
       !orderInput ||
@@ -1861,7 +1864,7 @@ async function startServer() {
     });
 
     db.version = (db.version || 8) + 1;
-    saveDatabase(db);
+    await saveDatabase(db);
 
     res.json({
       status: 'ok',
@@ -1871,7 +1874,7 @@ async function startServer() {
   });
 
   // Protected (Super Admin only): Replace entire database
-  app.put('/api/db', requireAdmin, (req, res) => {
+  app.put('/api/db', requireAdmin, async (req, res) => {
     const tier = (req as any).adminRoleTier as AdminRoleTier;
     if (!canExecuteSystemAction(tier, 'full_put_db')) {
       res.status(403).json({
@@ -1898,7 +1901,7 @@ async function startServer() {
       version: (currentDb.version || 8) + 1,
       lastUpdated: new Date().toISOString(),
     };
-    saveDatabase(updatedDb);
+    await saveDatabase(updatedDb);
     res.json({ status: 'ok', lastUpdated: updatedDb.lastUpdated, version: updatedDb.version });
   });
 
@@ -2011,7 +2014,7 @@ async function startServer() {
     }
 
     currentDb.version = (currentDb.version || 8) + 1;
-    saveDatabase(currentDb, typedDomain);
+    await saveDatabase(currentDb, typedDomain);
 
     res.json({
       status: 'ok',
@@ -2072,7 +2075,7 @@ async function startServer() {
               [id, JSON.stringify(initial)]
             );
           } catch (e) {
-            console.error('tenant village_database sync failed:', e?.message);
+            console.error('tenant village_database sync failed:', (e as any)?.message);
           }
         }
         cachedDbMemory.set(id, initial);
@@ -2642,7 +2645,7 @@ async function startServer() {
           nip: userinfo.sub || 'SSO-IDP',
         } as any;
         db.adminUsers = [...(db.adminUsers || []), matched as any];
-        saveDatabase(db, 'adminUsers');
+        await saveDatabase(db, 'adminUsers');
       }
       const matchedUser = matched!;
 
@@ -2701,7 +2704,7 @@ async function startServer() {
           nip: 'SSO-DUMMY',
         } as any;
         db.adminUsers = [...(db.adminUsers || []), matched as AdminUser];
-        saveDatabase(db, 'adminUsers');
+        await saveDatabase(db, 'adminUsers');
       }
       const matchedUser = matched!;
       const simTenantId = tenantStorage.getStore() || 'default';
@@ -2738,7 +2741,7 @@ async function startServer() {
   });
 
   // Mock IdP endpoints for local SSO testing
-  app.get('/api/sso/mock/authorize', (req, res) => {
+  app.get('/api/sso/mock/authorize', async (req, res) => {
     if (process.env.NODE_ENV === 'production') return res.status(404).send('Not found.');
     const redirectUri = String(req.query.redirect_uri || '');
     const state = String(req.query.state || '');
@@ -2749,12 +2752,12 @@ async function startServer() {
     res.redirect(url.toString());
   });
 
-  app.post('/api/sso/mock/token', (_req, res) => {
+  app.post('/api/sso/mock/token', async (_req, res) => {
     if (process.env.NODE_ENV === 'production') return res.status(404).json({ error: 'Not found.' });
     res.json({ access_token: 'mock_access_token', token_type: 'Bearer', expires_in: 3600, id_token: 'mock_id_token' });
   });
 
-  app.get('/api/sso/mock/userinfo', (_req, res) => {
+  app.get('/api/sso/mock/userinfo', async (_req, res) => {
     if (process.env.NODE_ENV === 'production') return res.status(404).json({ error: 'Not found.' });
     res.json({ sub: 'mock-user', email: 'sso@desa.id', name: 'SSO Dummy User', preferred_username: 'ssoadmin' });
   });
@@ -2833,7 +2836,7 @@ async function startServer() {
         isOrganicOrLocal: !!sub.is_organic_or_local,
       };
       db.products = [newProduct, ...(db.products || [])];
-      saveDatabase(db, 'products');
+      await saveDatabase(db, 'products');
       await pgAdapter.query(`UPDATE market_product_submissions SET status='approved', approved_product_id=$2, updated_at=NOW() WHERE id=$1`, [id, productId]);
       res.json({ status: 'ok', result: 'approved', product_id: productId });
     } catch (err: any) {
@@ -2939,7 +2942,7 @@ async function startServer() {
   });
 
   // Audit log helper (server-side)
-  const recordAudit = (action: string, actor: string, detail: string) => {
+  const recordAudit = async (action: string, actor: string, detail: string) => {
     try {
       const db = ensureDatabase();
       const entry = {
@@ -2953,10 +2956,10 @@ async function startServer() {
         status: 'Sukses' as const,
       };
       db.auditLogs = [entry, ...(db.auditLogs || [])].slice(0, 200);
-      saveDatabase(db, 'auditLogs');
+      await saveDatabase(db, 'auditLogs');
     } catch {}
   };
-  app.get('/api/db/backup', requireAdmin, (req, res) => {
+  app.get('/api/db/backup', requireAdmin, async (req, res) => {
     const tier = (req as any).adminRoleTier as AdminRoleTier;
     if (!canExecuteSystemAction(tier, 'backup_db')) {
       res.status(403).json({
@@ -2974,7 +2977,7 @@ async function startServer() {
     });
   });
 
-  app.post('/api/db/backup', requireAdmin, (req, res) => {
+  app.post('/api/db/backup', requireAdmin, async (req, res) => {
     const tier = (req as any).adminRoleTier as AdminRoleTier;
     if (!canExecuteSystemAction(tier, 'backup_db')) {
       res.status(403).json({
@@ -2990,7 +2993,7 @@ async function startServer() {
     });
   });
 
-  app.post('/api/db/restore', requireAdmin, (req, res) => {
+  app.post('/api/db/restore', requireAdmin, async (req, res) => {
     const tier = (req as any).adminRoleTier as AdminRoleTier;
     if (!canExecuteSystemAction(tier, 'restore_db')) {
       res.status(403).json({
@@ -3051,7 +3054,7 @@ async function startServer() {
       version: (currentDb.version || 8) + 1,
       lastUpdated: new Date().toISOString(),
     };
-    saveDatabase(restored);
+    await saveDatabase(restored);
     res.json({
       status: 'ok',
       preRestoreBackup,
@@ -3061,7 +3064,7 @@ async function startServer() {
   });
 
   // 4. Protected: Upload Media Asset directly into Database (Validated with Zod)
-  app.post('/api/media', requireAdmin, (req, res) => {
+  app.post('/api/media', requireAdmin, async (req, res) => {
     const parsed = MediaUploadPayloadSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
@@ -3085,22 +3088,22 @@ async function startServer() {
     };
 
     currentDb.mediaAssets = [newAsset, ...(currentDb.mediaAssets || []).slice(0, 60)];
-    saveDatabase(currentDb, 'mediaAssets');
+    await saveDatabase(currentDb, 'mediaAssets');
 
     res.json({ status: 'ok', asset: newAsset });
   });
 
   // 5. Protected: Delete Media Asset from Database
-  app.delete('/api/media/:id', requireAdmin, (req, res) => {
+  app.delete('/api/media/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const currentDb = ensureDatabase();
     currentDb.mediaAssets = (currentDb.mediaAssets || []).filter((m) => m.id !== id);
-    saveDatabase(currentDb, 'mediaAssets');
+    await saveDatabase(currentDb, 'mediaAssets');
     res.json({ status: 'ok', deletedId: id });
   });
 
   // 6. Live Chat Messages Endpoint (GET / POST / DELETE)
-  app.get('/api/chat', (_req, res) => {
+  app.get('/api/chat', async (_req, res) => {
     res.status(401).json({ status: 'error', error: 'Endpoint publik dihapus. Gunakan admin panel.' });
   });
 
@@ -3157,7 +3160,7 @@ async function startServer() {
     }
 
     db.chatMessages = updatedMessages;
-    saveDatabase(db, 'chatMessages');
+    await saveDatabase(db, 'chatMessages');
 
     res.json({
       status: 'ok',
@@ -3167,11 +3170,11 @@ async function startServer() {
     });
   });
 
-  app.delete('/api/chat/:id', requireAdmin, (req, res) => {
+  app.delete('/api/chat/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const db = ensureDatabase();
     db.chatMessages = (db.chatMessages || []).filter((m) => m.id !== id);
-    saveDatabase(db, 'chatMessages');
+    await saveDatabase(db, 'chatMessages');
     res.json({ status: 'ok', deletedId: id, messages: db.chatMessages });
   });
 
@@ -3258,7 +3261,7 @@ async function startServer() {
       externalUrl: waUrl,
     };
     db.chatMessages = [...(db.chatMessages || []), chatEntry];
-    saveDatabase(db, 'chatMessages');
+    await saveDatabase(db, 'chatMessages');
 
     res.json({
       status: 'ok',
@@ -3348,7 +3351,7 @@ async function startServer() {
         telegramMessageId: tgData.result?.message_id,
       };
       db.chatMessages = [...(db.chatMessages || []), chatEntry];
-      saveDatabase(db, 'chatMessages');
+      await saveDatabase(db, 'chatMessages');
 
       res.json({
         status: 'ok',
@@ -3496,7 +3499,7 @@ async function startServer() {
     }
 
     db.chatMessages = updatedMessages;
-    saveDatabase(db, 'chatMessages');
+    await saveDatabase(db, 'chatMessages');
 
     res.status(200).json({
       ok: true,
@@ -3577,7 +3580,7 @@ async function startServer() {
     };
 
     db.chatMessages = [...(db.chatMessages || []), aiChatEntry];
-    saveDatabase(db, 'chatMessages');
+    await saveDatabase(db, 'chatMessages');
 
     res.json({
       status: 'ok',
@@ -3661,7 +3664,7 @@ async function startServer() {
   });
 
   // 9. Real System Diagnostics, Integration Status & Cryptographic SHA-256 Verification
-  app.get('/api/integrations/status', (req, res) => {
+  app.get('/api/integrations/status', async (req, res) => {
     const startNs = process.hrtime.bigint();
     const db = ensureDatabase();
     const rawJson = JSON.stringify(db);
@@ -3768,7 +3771,7 @@ async function startServer() {
     });
   });
 
-  app.post('/api/security/verify', (req, res) => {
+  app.post('/api/security/verify', async (req, res) => {
     const { query = '' } = req.body || {};
     const clean = String(query).trim();
     const db = ensureDatabase();
@@ -3837,7 +3840,7 @@ async function startServer() {
   });
 
   // 10. Protected (Super Admin only): Reset database to initial factory state
-  app.post('/api/db/reset', requireAdmin, (req, res) => {
+  app.post('/api/db/reset', requireAdmin, async (req, res) => {
     const tier = (req as any).adminRoleTier as AdminRoleTier;
     if (!canExecuteSystemAction(tier, 'reset_db')) {
       res.status(403).json({
@@ -3848,7 +3851,7 @@ async function startServer() {
     }
     createBackupSnapshot('pre-reset');
     const fresh = createInitialDatabase();
-    saveDatabase(fresh);
+    await saveDatabase(fresh);
     res.json({ status: 'ok', db: sanitizeDbForClient(fresh, true) });
   });
 
@@ -3862,7 +3865,7 @@ async function startServer() {
   } else {
     const distPath = path.join(__dirname, 'dist');
     app.use(express.static(distPath));
-    app.get('*all', (_req, res) => {
+    app.get('*all', async (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
