@@ -25,39 +25,41 @@ export const LetterTrackingModal: React.FC<LetterTrackingModalProps> = ({
   onViewLetter,
 }) => {
   const [searchQuery, setSearchQuery] = useState(initialSearchCode);
-  const [matchedRequest, setMatchedRequest] = useState<LetterRequest | null>(() => {
-    if (initialSearchCode) {
-      const q = initialSearchCode.trim().toLowerCase();
-      return (
-        requests.find(
-          (r) =>
-            r.trackingCode.toLowerCase() === q ||
-            (r.registrationNumber && r.registrationNumber.toLowerCase() === q) ||
-            r.nik === initialSearchCode.trim()
-        ) || null
-      );
-    }
-    return requests[0] || null;
-  });
+  const [matchedRequest, setMatchedRequest] = useState<any | null>(null);
   const [hasSearched, setHasSearched] = useState(Boolean(initialSearchCode));
+
+  const fetchTrack = async (q: string) => {
+    if (!q.trim()) { setMatchedRequest(null); return; }
+    try {
+      const res = await fetch(`/api/public/track-letter?code=${encodeURIComponent(q.trim())}`);
+      const data = await res.json();
+      if (res.ok && data.status === 'ok') {
+        setMatchedRequest({
+          trackingCode: q.trim(),
+          letterTitle: data.tracking.letterTitle,
+          status: data.tracking.status,
+          createdAt: data.tracking.createdAt,
+          citizenName: data.tracking.citizenName,
+        });
+      } else {
+        setMatchedRequest(null);
+      }
+    } catch {
+      setMatchedRequest(null);
+    }
+  };
+
+  React.useEffect(() => {
+    if (initialSearchCode) {
+      setHasSearched(true);
+      fetchTrack(initialSearchCode);
+    }
+  }, [initialSearchCode]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setHasSearched(true);
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) {
-      setMatchedRequest(null);
-      return;
-    }
-
-    const found = requests.find(
-      (r) =>
-        r.trackingCode.toLowerCase().includes(q) ||
-        (r.registrationNumber && r.registrationNumber.toLowerCase().includes(q)) ||
-        r.nik.includes(q) ||
-        r.citizenName.toLowerCase().includes(q)
-    );
-    setMatchedRequest(found || null);
+    fetchTrack(searchQuery);
   };
 
   const getStepState = (currentStatus: LetterRequest['status'], stepIndex: number) => {

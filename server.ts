@@ -1261,10 +1261,20 @@ async function startServer() {
   // ==========================================================================
   // 0. HEALTH, AUTH, TOKEN ROTATION & PASSWORD RESET ENDPOINTS
   // ==========================================================================
-  app.get('/api/public/track-letter', (req, res) => {
+  const trackCodeAttempts = new Map<string, { count: number; reset: number }>();
+  app.get('/api/public/track-letter', strictRateLimiter(20), (req, res) => {
     const code = String(req.query.code || '').trim();
     if (!code) {
       return res.status(400).json({ status: 'error', error: 'Kode lacak wajib diisi.' });
+    }
+    // per-code rate limit
+    const now = Date.now();
+    const ca = trackCodeAttempts.get(code) || { count: 0, reset: now + 60000 };
+    if (now > ca.reset) { ca.count = 0; ca.reset = now + 60000; }
+    ca.count += 1;
+    trackCodeAttempts.set(code, ca);
+    if (ca.count > 10) {
+      return res.status(429).json({ status: 'error', error: 'Terlalu banyak percobaan untuk kode ini.' });
     }
     const db = ensureDatabase();
     const found = (db.requests || []).find((r: any) =>
@@ -1274,13 +1284,13 @@ async function startServer() {
     if (!found) {
       return res.status(404).json({ status: 'error', error: 'Kode lacak tidak ditemukan.' });
     }
-    const { nik, citizenName, whatsapp, ...safe } = found as any;
     res.json({
       status: 'ok',
-      request: {
-        ...safe,
-        citizenName: citizenName ? citizenName.split(' ')[0] + ' ***' : citizenName,
-        nik: nik ? nik.slice(0, 4) + '********' + nik.slice(-4) : nik,
+      tracking: {
+        status: found.status,
+        letterTitle: found.letterTitle,
+        createdAt: found.createdAt,
+        citizenName: found.citizenName ? String(found.citizenName).split(' ')[0] + ' ***' : null,
       },
     });
   });
@@ -1740,7 +1750,7 @@ async function startServer() {
     const serverReq: LetterRequest = {
       ...incoming,
       id: `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      trackingCode: incoming.trackingCode || `SRT-${Date.now()}`,
+      trackingCode: `TRK-${crypto.randomBytes(8).toString('hex').toUpperCase()}`,
       status: 'Menunggu Verifikasi',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
