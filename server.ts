@@ -3085,6 +3085,7 @@ async function startServer() {
       lastUpdated: new Date().toISOString(),
     };
     await saveDatabase(restored);
+    recordAudit('restore_db', 'admin', 'Database restored');
     res.json({
       status: 'ok',
       preRestoreBackup,
@@ -3882,6 +3883,7 @@ async function startServer() {
     createBackupSnapshot('pre-reset');
     const fresh = createInitialDatabase();
     await saveDatabase(fresh);
+    recordAudit('reset_db', 'admin', 'Database reset to factory');
     res.json({ status: 'ok', db: sanitizeDbForClient(fresh, true) });
   });
 
