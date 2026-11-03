@@ -1927,6 +1927,16 @@ async function startServer() {
 
     const typedDomain = domain as keyof Omit<VillageDatabase, 'version' | 'lastUpdated'>;
 
+    // Operator cannot approve/sign letters (status Selesai / signedBy)
+    if (typedDomain === 'requests' && tier === 'operator') {
+      const items = Array.isArray(payload) ? payload : [payload];
+      for (const it of items) {
+        if (it && (it.status === 'Selesai' || it.signedBy || it.registrationNumber)) {
+          return res.status(403).json({ status: 'error', error: 'Forbidden: Operator tidak boleh menyetujui/menandatangani surat.' });
+        }
+      }
+    }
+
     // RBAC Check per domain
     if (!canModifyDomain(tier, typedDomain)) {
       res.status(403).json({
@@ -3782,7 +3792,7 @@ async function startServer() {
     const { query = '' } = req.body || {};
     const clean = String(query).trim();
     const db = ensureDatabase();
-    const secret = `SID-${db.siteConfig.villageCode}-SECRET-KEY`;
+    const secret = process.env[`TENANT_${(tenantStorage.getStore() || 'default').toUpperCase()}_HMAC_SECRET`] || process.env.HMAC_SECRET_KEY || 'dev-insecure-hmac-key';
 
     const matchedRequest = db.requests.find(
       (r) =>

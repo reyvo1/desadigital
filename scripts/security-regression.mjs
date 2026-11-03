@@ -35,8 +35,8 @@ async function main() {
 
   const platformToken = await login('admin', 'desa2026', null);
   const tenantToken = await login('admin', 'desa2026', 'tenantb');
-  const kadesToken = await login('kades', 'kades2026', null);
-  const operatorToken = await login('pelayanan', 'layanan2026', null);
+  const kadesToken = await login('kades', 'desa2026', null);
+  const operatorToken = await login('pelayanan', 'desa2026', null);
 
   const tiers = [
     { name: 'super_admin_platform', token: platformToken, tenant: null },
