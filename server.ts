@@ -1225,7 +1225,7 @@ async function startServer() {
     next();
   });
 
-  app.get('/metrics', async (_req, res) => {
+  app.get('/metrics', requireAdmin, async (_req, res) => {
     const lines: string[] = [];
     lines.push('# HELP http_requests_total Total HTTP requests');
     lines.push('# TYPE http_requests_total counter');
@@ -3906,7 +3906,7 @@ app.post('/api/chat', strictRateLimiter(20), async (req, res) => {
   });
 
   // 9. Real System Diagnostics, Integration Status & Cryptographic SHA-256 Verification
-  app.get('/api/integrations/status', async (req, res) => {
+  app.get('/api/integrations/status', requireAdmin, async (req, res) => {
     const startNs = process.hrtime.bigint();
     const db = ensureDatabase();
     const rawJson = JSON.stringify(db);
