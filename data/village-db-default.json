@@ -1,6 +1,6 @@
 {
-  "version": 108,
-  "lastUpdated": "2026-11-04T06:21:11.916Z",
+  "version": 113,
+  "lastUpdated": "2026-11-04T07:44:11.251Z",
   "siteConfig": {
     "villageName": "Desa Sukamaju",
     "subDistrict": "Kecamatan Megamendung",
@@ -363,7 +363,23 @@
       }
     ],
     "aiQuotaMonthly": 1000000,
-    "aiUsedMonthly": 28
+    "aiUsedMonthly": 28,
+    "citizenTaxBills": [
+      {
+        "id": "bill-sec-a",
+        "kk": "3201100000000000",
+        "amount": 100000,
+        "status": "Lunas",
+        "paidAt": "2026-11-04 07:44 WIB",
+        "receiptCode": "KWT-DESA-251114"
+      },
+      {
+        "id": "bill-sec-b",
+        "kk": "3201100000000001",
+        "amount": 100000,
+        "status": "Belum Lunas"
+      }
+    ]
   },
   "citizens": [
     {
@@ -29327,8 +29343,9 @@
       "nik": "3201793772029054",
       "kk": "3201100000000000",
       "name": "UAT Anggota",
-      "familyRole": "Anak",
       "gender": "Laki-laki",
+      "dusun": "Dusun 1",
+      "familyRole": "Anak",
       "birthPlace": "Bogor",
       "birthDate": "2026-11-04",
       "age": 0,
@@ -29336,7 +29353,6 @@
       "religion": "Islam",
       "education": "Tidak/Belum Sekolah",
       "occupation": "Belum / Tidak Bekerja",
-      "dusun": "Dusun 1",
       "rt": "001",
       "rw": "001",
       "address": "Alamat 0",
@@ -34775,13 +34791,23 @@
       "fullName": "Pelayanan",
       "role": "pelayanan",
       "nip": "19871103 201705 1 004",
-      "passwordHash": "scrypt$f2170c7d664d0b9e10f46d645e045654$2f151e0c431727701f0cbe2d523a6952e62deef65d9c97f8faac3fb294588a1ade744acf20eff3b47a92d65f1e7b95c88243a8dd4c93a68e24dba106ffa39f5f"
+      "passwordHash": "scrypt$c9f354c3d5880269b302099270acadf4$f44b2d0a12408f7fc4d81a04f1e574e3b3dd3d07dbb0dde64574d3fb47c5f48eda2286f93c0c7ceded1f901df175910dcfcbc5615c858eb2787e384bc8f3cc14"
     }
   ],
   "auditLogs": [
     {
-      "id": "audit-1793773271916-st9v",
-      "timestamp": "2026-11-04T06:21:11.916Z",
+      "id": "audit-1793778251251-hqso",
+      "timestamp": "2026-11-04T07:44:11.251Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "citizen_bill_confirm",
+      "module": "Keamanan",
+      "encryptionHash": "f35bb0ed593eb5643e8ac3a06d33e728bee55959548d3977d07481ba66353e2f",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778250565-3cjp",
+      "timestamp": "2026-11-04T07:44:10.565Z",
       "actor": "admin",
       "role": "system",
       "action": "subscription_update",
@@ -34790,8 +34816,18 @@
       "status": "Sukses"
     },
     {
-      "id": "audit-1793773271238-676h",
-      "timestamp": "2026-11-04T06:21:11.238Z",
+      "id": "audit-1793778250239-x8r6",
+      "timestamp": "2026-11-04T07:44:10.239Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "patch_siteConfig",
+      "module": "Keamanan",
+      "encryptionHash": "7a5739099a138c82c4908aafd277a55cb897f8dde9643b799eb2e405ff7e73c6",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778250084-ob5h",
+      "timestamp": "2026-11-04T07:44:10.084Z",
       "actor": "pelayanan",
       "role": "system",
       "action": "login",
@@ -34800,8 +34836,8 @@
       "status": "Sukses"
     },
     {
-      "id": "audit-1793773270941-4m6y",
-      "timestamp": "2026-11-04T06:21:10.941Z",
+      "id": "audit-1793778249992-c8za",
+      "timestamp": "2026-11-04T07:44:09.992Z",
       "actor": "kades",
       "role": "system",
       "action": "login",
@@ -34810,8 +34846,8 @@
       "status": "Sukses"
     },
     {
-      "id": "audit-1793773270715-duef",
-      "timestamp": "2026-11-04T06:21:10.715Z",
+      "id": "audit-1793778249802-j96j",
+      "timestamp": "2026-11-04T07:44:09.802Z",
       "actor": "admin",
       "role": "system",
       "action": "login",
@@ -34820,8 +34856,8 @@
       "status": "Sukses"
     },
     {
-      "id": "audit-1793773270589-tjjl",
-      "timestamp": "2026-11-04T06:21:10.589Z",
+      "id": "audit-1793778249683-3k3x",
+      "timestamp": "2026-11-04T07:44:09.683Z",
       "actor": "admin",
       "role": "system",
       "action": "login",
@@ -34830,8 +34866,8 @@
       "status": "Sukses"
     },
     {
-      "id": "audit-1793772028984-rnqx",
-      "timestamp": "2026-11-04T06:00:28.984Z",
+      "id": "audit-1793778223371-mzgl",
+      "timestamp": "2026-11-04T07:43:43.371Z",
       "actor": "admin",
       "role": "system",
       "action": "login",
@@ -34840,8 +34876,168 @@
       "status": "Sukses"
     },
     {
-      "id": "audit-1793772016337-n5te",
-      "timestamp": "2026-11-04T06:00:16.337Z",
+      "id": "audit-1793778197467-uc90",
+      "timestamp": "2026-11-04T07:43:17.467Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778168098-hk45",
+      "timestamp": "2026-11-04T07:42:48.098Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778167551-jmlu",
+      "timestamp": "2026-11-04T07:42:47.551Z",
+      "actor": "pelayanan",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "da2b4ae4259cedb8a74d57e1145282fccaae7ffffcf7771d0f5c5eb30255d25e",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778167419-3y62",
+      "timestamp": "2026-11-04T07:42:47.419Z",
+      "actor": "kades",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "0e69a7a835afb85eb0b5af7874e861a2d3a918468ee5aab7c5681691372ff5d0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778167123-oii8",
+      "timestamp": "2026-11-04T07:42:47.123Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778166941-nn8l",
+      "timestamp": "2026-11-04T07:42:46.941Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778139543-c9qi",
+      "timestamp": "2026-11-04T07:42:19.543Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778139150-70qq",
+      "timestamp": "2026-11-04T07:42:19.150Z",
+      "actor": "pelayanan",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "da2b4ae4259cedb8a74d57e1145282fccaae7ffffcf7771d0f5c5eb30255d25e",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778139062-fdq0",
+      "timestamp": "2026-11-04T07:42:19.062Z",
+      "actor": "kades",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "0e69a7a835afb85eb0b5af7874e861a2d3a918468ee5aab7c5681691372ff5d0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778138868-o3po",
+      "timestamp": "2026-11-04T07:42:18.868Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778138734-1ock",
+      "timestamp": "2026-11-04T07:42:18.734Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778097115-mrpm",
+      "timestamp": "2026-11-04T07:41:37.115Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778096605-ymhu",
+      "timestamp": "2026-11-04T07:41:36.605Z",
+      "actor": "pelayanan",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "da2b4ae4259cedb8a74d57e1145282fccaae7ffffcf7771d0f5c5eb30255d25e",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778096488-xljs",
+      "timestamp": "2026-11-04T07:41:36.488Z",
+      "actor": "kades",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "0e69a7a835afb85eb0b5af7874e861a2d3a918468ee5aab7c5681691372ff5d0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778095754-17lf",
+      "timestamp": "2026-11-04T07:41:35.754Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778095591-oegk",
+      "timestamp": "2026-11-04T07:41:35.591Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778094825-i479",
+      "timestamp": "2026-11-04T07:41:34.825Z",
       "actor": "pelayanan",
       "role": "system",
       "action": "password_reset",
@@ -34850,11 +35046,111 @@
       "status": "Sukses"
     },
     {
-      "id": "audit-1793772015630-ewie",
-      "timestamp": "2026-11-04T06:00:15.630Z",
+      "id": "audit-1793778093848-tww5",
+      "timestamp": "2026-11-04T07:41:33.848Z",
       "actor": "admin",
       "role": "system",
       "action": "restore_db",
+      "module": "Keamanan",
+      "encryptionHash": "a2b2721d485a09e710ff12403fe9275287f6f2bda8fd5783056b29fb0cea1441",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778092141-go5u",
+      "actor": "pelayanan",
+      "action": "login",
+      "timestamp": "2026-11-04T07:41:32.141Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "da2b4ae4259cedb8a74d57e1145282fccaae7ffffcf7771d0f5c5eb30255d25e",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778092038-sndb",
+      "actor": "admin",
+      "action": "login",
+      "timestamp": "2026-11-04T07:41:32.038Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773271916-st9v",
+      "actor": "admin",
+      "action": "subscription_update",
+      "timestamp": "2026-11-04T06:21:11.916Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773271238-676h",
+      "actor": "pelayanan",
+      "action": "login",
+      "timestamp": "2026-11-04T06:21:11.238Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "da2b4ae4259cedb8a74d57e1145282fccaae7ffffcf7771d0f5c5eb30255d25e",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773270941-4m6y",
+      "actor": "kades",
+      "action": "login",
+      "timestamp": "2026-11-04T06:21:10.941Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "0e69a7a835afb85eb0b5af7874e861a2d3a918468ee5aab7c5681691372ff5d0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773270715-duef",
+      "actor": "admin",
+      "action": "login",
+      "timestamp": "2026-11-04T06:21:10.715Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773270589-tjjl",
+      "actor": "admin",
+      "action": "login",
+      "timestamp": "2026-11-04T06:21:10.589Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793772028984-rnqx",
+      "actor": "admin",
+      "action": "login",
+      "timestamp": "2026-11-04T06:00:28.984Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793772016337-n5te",
+      "actor": "pelayanan",
+      "action": "password_reset",
+      "timestamp": "2026-11-04T06:00:16.337Z",
+      "role": "system",
+      "module": "Keamanan",
+      "encryptionHash": "338cf07c6355fedf8625230074e3c45aa7a28ae1740f7f1bb8c7680cab471b0d",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793772015630-ewie",
+      "actor": "admin",
+      "action": "restore_db",
+      "timestamp": "2026-11-04T06:00:15.630Z",
+      "role": "system",
       "module": "Keamanan",
       "encryptionHash": "a2b2721d485a09e710ff12403fe9275287f6f2bda8fd5783056b29fb0cea1441",
       "status": "Sukses"
@@ -35298,11 +35594,55 @@
       "id": "chat-1793773271722-j0n5",
       "sessionId": "sess-ad5250205a1350a7b2210aee233e1692",
       "senderName": "Warga Desa",
+      "message": "tes",
+      "senderPhone": "-",
+      "senderRole": "citizen",
+      "channel": "web",
+      "timestamp": "2026-11-04 14:21",
+      "isRead": false
+    },
+    {
+      "id": "chat-1793778096904-3paa",
+      "sessionId": "sess-c01e3d9db0af6c8a382dbd4a6f06d3b4",
+      "senderName": "Warga Desa",
       "senderPhone": "-",
       "senderRole": "citizen",
       "channel": "web",
       "message": "tes",
-      "timestamp": "2026-11-04 14:21",
+      "timestamp": "2026-11-04 15:41",
+      "isRead": false
+    },
+    {
+      "id": "chat-1793778139424-qi83",
+      "sessionId": "sess-ccb287a5c68dc74ebcddc88933c89dba",
+      "senderName": "Warga Desa",
+      "senderPhone": "-",
+      "senderRole": "citizen",
+      "channel": "web",
+      "message": "tes",
+      "timestamp": "2026-11-04 15:42",
+      "isRead": false
+    },
+    {
+      "id": "chat-1793778167888-g3pa",
+      "sessionId": "sess-a1b133b8375e17c51b927515233bc083",
+      "senderName": "Warga Desa",
+      "senderPhone": "-",
+      "senderRole": "citizen",
+      "channel": "web",
+      "message": "tes",
+      "timestamp": "2026-11-04 15:42",
+      "isRead": false
+    },
+    {
+      "id": "chat-1793778250424-ue43",
+      "sessionId": "sess-0c0acbd7581bdc0d660fe203d2de12ed",
+      "senderName": "Warga Desa",
+      "senderPhone": "-",
+      "senderRole": "citizen",
+      "channel": "web",
+      "message": "tes",
+      "timestamp": "2026-11-04 15:44",
       "isRead": false
     }
   ],
@@ -35312,9 +35652,9 @@
     {
       "id": "mut-kk-1793772029068",
       "nik": "3201793772029054",
-      "kk": "3201100000000000",
       "citizenName": "UAT Anggota (KK: Warga Dummy 0)",
       "mutationType": "KELAHIRAN",
+      "kk": "3201100000000000",
       "date": "2026-11-04",
       "dusun": "Dusun 1",
       "rtRw": "RT 001 / RW 001",

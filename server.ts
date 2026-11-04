@@ -1778,9 +1778,21 @@ async function startServer() {
       return res.status(429).json({ status: 'error', error: 'Terlalu cepat. Coba lagi dalam 1 menit.' });
     }
 
+    // cleanup expired
+    for (const [k, v] of citizenOtpStore.entries()) {
+      if (v.expires && v.expires < now && (!v.lastRequest || now - v.lastRequest > 60000)) citizenOtpStore.delete(k);
+    }
+
+    if (process.env.NODE_ENV === 'production' && !pgAdapter) {
+      return res.status(503).json({ status: 'error', error: 'Layanan OTP tidak tersedia.' });
+    }
+
     const citizen = await getCitizenByNik(nik);
     const tenantId = tenantStorage.getStore() || 'default';
     const generic = { status: 'ok', message: 'Jika NIK terdaftar, kode OTP dikirim.' };
+
+    // cooldown per NIK for all
+    citizenOtpStore.set(nik, { ...(citizenOtpStore.get(nik) || {}), lastRequest: now, otp: citizenOtpStore.get(nik)?.otp || '', expires: citizenOtpStore.get(nik)?.expires || 0, attempts: citizenOtpStore.get(nik)?.attempts || 0 });
 
     if (citizen) {
       const otp = String(crypto.randomInt(100000, 1000000));
@@ -1819,7 +1831,7 @@ async function startServer() {
           }
         } catch (e) {
           console.error('OTP dispatch failed:', (e as any)?.message);
-          await pgAdapter.query(`UPDATE notification_outbox SET status='pending' WHERE id=$1`, [outboxId]).catch(() => {});
+          await pgAdapter.query(`UPDATE notification_outbox SET status='failed', last_error=$1, message='Kode OTP login warga: ******' WHERE id=$2`, [(e as any)?.message || 'dispatch failed', outboxId]).catch(() => {});
         }
       }
     }
@@ -2091,11 +2103,24 @@ app.post('/api/citizen/pay-bill', async (req, res) => {
       return;
     }
 
-    const ins = await pgAdapter.query<any>(
-      `INSERT INTO citizen_bill_payments (tenant_id, bill_id, kk, payer_nik, amount, status)
-       VALUES ($1,$2,$3,$4,$5,'pending') RETURNING *`,
-      [tenantId, billId, kk, payerNik, amount]
-    );
+    let ins;
+    try {
+      ins = await pgAdapter.query<any>(
+        `INSERT INTO citizen_bill_payments (tenant_id, bill_id, kk, payer_nik, amount, status)
+         VALUES ($1,$2,$3,$4,$5,'pending') RETURNING *`,
+        [tenantId, billId, kk, payerNik, amount]
+      );
+    } catch (e: any) {
+      if (e?.code === '23505') {
+        const ex = await pgAdapter.query<any>(`SELECT * FROM citizen_bill_payments WHERE tenant_id=$1 AND bill_id=$2 AND status='pending' LIMIT 1`, [tenantId, billId]);
+        if (ex.rows.length > 0) {
+          res.json({ status: 'ok', payment: ex.rows[0], message: 'Pembayaran pending sudah ada.' });
+          return;
+        }
+      }
+      res.status(500).json({ status: 'error', error: 'Gagal mencatat pembayaran.' });
+      return;
+    }
     res.json({ status: 'ok', payment: ins.rows[0], message: 'Pembayaran dicatat sebagai pending.' });
   });
 
@@ -2118,6 +2143,11 @@ app.post('/api/citizen/pay-bill', async (req, res) => {
 
   // Admin confirm citizen bill payment
   app.post('/api/admin/citizen-bills/:billId/confirm', requireAdmin, async (req, res) => {
+    const session = (req as any).adminSession;
+    if (!session || !['super_admin','kades'].includes(session.roleTier)) {
+      res.status(403).json({ status: 'error', error: 'Forbidden.' });
+      return;
+    }
     const billId = String(req.params.billId || '').trim();
     if (!billId) { res.status(400).json({ status: 'error', error: 'ID tagihan wajib diisi.' }); return; }
     if (!pgAdapter) { res.status(503).json({ status: 'error', error: 'PostgreSQL tidak tersedia.' }); return; }
@@ -2128,30 +2158,40 @@ app.post('/api/citizen/pay-bill', async (req, res) => {
     const payment = payRes.rows[0];
     const receiptCode = `KWT-DESA-${Date.now().toString().slice(-6)}`;
     const paidAt = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' WIB';
-    await pgAdapter.query(`UPDATE citizen_bill_payments SET status='paid', receipt_code=$1, updated_at=NOW() WHERE id=$2`, [receiptCode, payment.id]);
-    // update bill in siteConfig
-    const db = await ensureDatabase();
-    const bills = (db.siteConfig as any).citizenTaxBills || [];
-    const idx = bills.findIndex((b: any) => b.id === billId && b.kk === payment.kk);
-    if (idx !== -1) {
-      bills[idx] = { ...bills[idx], status: 'Lunas', paidAt, receiptCode };
-      (db.siteConfig as any).citizenTaxBills = [...bills];
-      db.version = (db.version || 8) + 1;
-      await saveDatabase(db, 'siteConfig');
+    const upd = await pgAdapter.query<any>(`UPDATE citizen_bill_payments SET status='paid', receipt_code=$1, updated_at=NOW() WHERE id=$2 AND status='pending' RETURNING *`, [receiptCode, payment.id]);
+    if (upd.rows.length === 0) { res.status(409).json({ status: 'error', error: 'Pembayaran sudah diproses.' }); return; }
+    try {
+      const db = await ensureDatabase();
+      const bills = (db.siteConfig as any).citizenTaxBills || [];
+      const idx = bills.findIndex((b: any) => b.id === billId && b.kk === payment.kk);
+      if (idx !== -1) {
+        bills[idx] = { ...bills[idx], status: 'Lunas', paidAt, receiptCode };
+        (db.siteConfig as any).citizenTaxBills = [...bills];
+        db.version = (db.version || 8) + 1;
+        await saveDatabase(db, 'siteConfig');
+      }
+    } catch (e) {
+      await pgAdapter.query(`UPDATE citizen_bill_payments SET status='pending', receipt_code=NULL, updated_at=NOW() WHERE id=$1`, [payment.id]).catch(() => {});
+      res.status(500).json({ status: 'error', error: 'Gagal memperbarui tagihan.' });
+      return;
     }
-    const session = (req as any).adminSession;
     recordAudit('citizen_bill_confirm', session?.username || 'admin', `Konfirmasi pembayaran tagihan ${billId}`);
     res.json({ status: 'ok', payment: { ...payment, status: 'paid', receipt_code: receiptCode }, receiptCode });
   });
 
   // Admin reject citizen bill payment
   app.post('/api/admin/citizen-bills/:billId/reject', requireAdmin, async (req, res) => {
+    const session = (req as any).adminSession;
+    if (!session || !['super_admin','kades'].includes(session.roleTier)) {
+      res.status(403).json({ status: 'error', error: 'Forbidden.' });
+      return;
+    }
     const billId = String(req.params.billId || '').trim();
     if (!billId) { res.status(400).json({ status: 'error', error: 'ID tagihan wajib diisi.' }); return; }
     if (!pgAdapter) { res.status(503).json({ status: 'error', error: 'PostgreSQL tidak tersedia.' }); return; }
     const tenantId = tenantStorage.getStore() || 'default';
-    await pgAdapter.query(`UPDATE citizen_bill_payments SET status='failed', updated_at=NOW() WHERE tenant_id=$1 AND bill_id=$2 AND status='pending'`, [tenantId, billId]);
-    const session = (req as any).adminSession;
+    const r = await pgAdapter.query<any>(`UPDATE citizen_bill_payments SET status='failed', updated_at=NOW() WHERE tenant_id=$1 AND bill_id=$2 AND status='pending'`, [tenantId, billId]);
+    if ((r.rowCount || 0) === 0) { res.status(404).json({ status: 'error', error: 'Pembayaran pending tidak ditemukan.' }); return; }
     recordAudit('citizen_bill_reject', session?.username || 'admin', `Penolakan pembayaran tagihan ${billId}`);
     res.json({ status: 'ok', message: 'Pembayaran ditolak.' });
   });

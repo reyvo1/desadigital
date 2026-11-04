@@ -53,13 +53,27 @@ async function main() {
     if (!db.siteConfig) db.siteConfig = {};
     if (!db.siteConfig.citizenTaxBills) db.siteConfig.citizenTaxBills = [];
     if (!db.siteConfig.citizenTaxBills.find((b) => b.id === 'bill-sec-a')) {
-      db.siteConfig.citizenTaxBills.push({ id: 'bill-sec-a', kk: '3201100000000011', amount: 100000, status: 'Belum Lunas' });
+      db.siteConfig.citizenTaxBills.push({ id: 'bill-sec-a', kk: '3201100000000000', amount: 100000, status: 'Belum Lunas' });
     }
     if (!db.siteConfig.citizenTaxBills.find((b) => b.id === 'bill-sec-b')) {
-      db.siteConfig.citizenTaxBills.push({ id: 'bill-sec-b', kk: '3201100000000022', amount: 100000, status: 'Belum Lunas' });
+      db.siteConfig.citizenTaxBills.push({ id: 'bill-sec-b', kk: '3201100000000001', amount: 100000, status: 'Belum Lunas' });
+    }
+    if (db.siteConfig.citizenTaxBills.find((b) => b.id === 'bill-sec-a')) {
+      const b = db.siteConfig.citizenTaxBills.find((x) => x.id === 'bill-sec-a');
+      b.status = 'Belum Lunas';
+      b.kk = '3201100000000000';
+    }
+    if (db.siteConfig.citizenTaxBills.find((b) => b.id === 'bill-sec-b')) {
+      const b = db.siteConfig.citizenTaxBills.find((x) => x.id === 'bill-sec-b');
+      b.status = 'Belum Lunas';
+      b.kk = '3201100000000001';
     }
     db.version = (db.version || 1) + 1;
-    await fetch(`${BASE_URL}/api/db`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${platformToken}` }, body: JSON.stringify(db) });
+    await fetch(`${BASE_URL}/api/db/siteConfig`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${platformToken}` },
+      body: JSON.stringify({ data: db.siteConfig }),
+    });
   } catch {}
 
 
@@ -193,6 +207,42 @@ async function main() {
     });
     if (res.status !== 404) throw new Error(`status ${res.status} (harus 404)`);
     // ensure bill-sec-b unchanged
+  });
+
+  await check('pay-bill idempoten (2x) -> satu pending', async () => {
+    if (!citizenTok) throw new Error('no citizen token');
+    const [r1, r2] = await Promise.all([
+      fetch(`${BASE_URL}/api/citizen/pay-bill`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(citizenTok) }, body: JSON.stringify({ billId: 'bill-sec-a' }) }),
+      fetch(`${BASE_URL}/api/citizen/pay-bill`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(citizenTok) }, body: JSON.stringify({ billId: 'bill-sec-a' }) }),
+    ]);
+    if (r1.status !== 200 || r2.status !== 200) throw new Error(`status ${r1.status}/${r2.status}`);
+  });
+
+  await check('confirm tanpa token -> 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/citizen-bills/bill-sec-a/confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    if (res.status !== 401) throw new Error(`status ${res.status} (harus 401)`);
+  });
+
+  await check('confirm operator -> 403', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/citizen-bills/bill-sec-a/confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(operatorToken) } });
+    if (res.status !== 403) throw new Error(`status ${res.status} (harus 403)`);
+  });
+
+  await check('confirm admin -> 200 Lunas', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/citizen-bills/bill-sec-a/confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(platformToken) } });
+    if (res.status !== 200) throw new Error(`status ${res.status} (harus 200)`);
+    const d = await res.json();
+    if (d?.payment?.status !== 'paid') throw new Error('payment not paid');
+  });
+
+  await check('confirm kedua -> 404/409', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/citizen-bills/bill-sec-a/confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(platformToken) } });
+    if (res.status !== 404 && res.status !== 409) throw new Error(`status ${res.status} (harus 404/409)`);
+  });
+
+  await check('reject tanpa pending -> 404', async () => {
+    const res = await fetch(`${BASE_URL}/api/admin/citizen-bills/bill-sec-z/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(platformToken) } });
+    if (res.status !== 404) throw new Error(`status ${res.status} (harus 404)`);
   });
 
   if (process.exitCode) {

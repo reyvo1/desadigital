@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "lastUpdated": "2026-11-04T06:21:11.944Z",
+  "lastUpdated": "2026-11-04T07:44:10.674Z",
   "siteConfig": {
     "villageName": "Desa Sukamaju",
     "villageCode": "32.01.14.2005",
@@ -2435,6 +2435,86 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit-1793778250674-dypc",
+      "timestamp": "2026-11-04T07:44:10.674Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778249910-0s6p",
+      "timestamp": "2026-11-04T07:44:09.910Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778168165-kddo",
+      "timestamp": "2026-11-04T07:42:48.166Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778167251-3geo",
+      "timestamp": "2026-11-04T07:42:47.251Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778139569-sebn",
+      "timestamp": "2026-11-04T07:42:19.569Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778138951-emtf",
+      "timestamp": "2026-11-04T07:42:18.952Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778097171-3j3o",
+      "timestamp": "2026-11-04T07:41:37.171Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778096361-ijwq",
+      "timestamp": "2026-11-04T07:41:36.361Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
     {
       "id": "audit-1793773271944-vu76",
       "timestamp": "2026-11-04T06:21:11.944Z",
