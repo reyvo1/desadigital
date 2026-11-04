@@ -50,3 +50,11 @@ Integrasi nilai statis/fallback ke database (siteConfig.defaults) agar admin bis
 - Jika menambah field baru ke `siteConfig`, tambahkan juga di `mockData.ts`, CMS, dan patch script.
 - Jangan ubah struktur 24 tabel tanpa koordinasi (migrasi idempoten).
 - Smoke test harus tetap 9/9 hijau setelah perubahan.
+
+## REVISI-02 (security hardening)
+- GET /api/saas/billing wajib requirePlatformAdmin; ?tenantId= dihapus.
+- pay-bill validasi KK 16 digit, idempoten pending, konfirmasi admin -> Lunas + audit.
+- OTP via notification_outbox, auto-send, OTP disamarkan, anti-enumeration, jeda 60s.
+- Migrasi 022 citizen_bill_payments, 023 FK RESTRICT + tenant demo non-active.
+- security-regression.mjs + security-prod.mjs + unit citizenApi.test.ts.
+- seed-dummy.mjs aman (local only) + SEED_ADMIN_PASSWORD.

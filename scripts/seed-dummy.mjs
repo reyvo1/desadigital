@@ -1,14 +1,26 @@
 import fs from 'node:fs';
 // scripts/seed-dummy.mjs
 const BASE = process.env.BASE_URL || 'http://127.0.0.1:3000';
+const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'desa2026';
 const N_CITIZENS = Number(process.env.SEED_CITIZENS || 1200);
+const force = process.argv.includes('--force');
+
+if (process.env.NODE_ENV === 'production' && !force) {
+  console.error('Refusing to run seed in production without --force');
+  process.exit(1);
+}
+const url = new URL(BASE);
+if (!['localhost','127.0.0.1'].includes(url.hostname) && !force) {
+  console.error('Refusing to run seed against non-local BASE_URL without --force');
+  process.exit(1);
+}
 
 async function j(res) { try { return await res.json(); } catch { return {}; } }
 
 async function main() {
   let res = await fetch(`${BASE}/api/auth/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'desa2026' }),
+    body: JSON.stringify({ username: 'admin', password: SEED_ADMIN_PASSWORD }),
   });
   const data = await j(res);
   const token = data.token;

@@ -45,7 +45,7 @@ describe('Integrasi PostgreSQL 24 Tabel, Migrasi Idempoten, Transaksi, RBAC & Zo
 
     // Pass 1: jalankan migrasi & sinkronisasi penuh
     const pass1Mig = await runSqlMigrations(adapter, migrationsDir);
-    assert.equal(pass1Mig.applied.length, 21);
+    assert.equal(pass1Mig.applied.length, 23);
     assert.equal(pass1Mig.skipped.length, 0);
 
     const pass1Sync = await syncFullDatabaseToPg(adapter, initialVillageDatabase);
@@ -77,7 +77,7 @@ describe('Integrasi PostgreSQL 24 Tabel, Migrasi Idempoten, Transaksi, RBAC & Zo
     // Pass 2: jalankan ulang migrasi & sinkronisasi untuk menguji idempotensi (0 duplikasi)
     const pass2Mig = await runSqlMigrations(adapter, migrationsDir);
     assert.equal(pass2Mig.applied.length, 0, 'Migrasi ke-2 harus skip semua file yang sudah tercatat');
-    assert.equal(pass2Mig.skipped.length, 21);
+    assert.equal(pass2Mig.skipped.length, 23);
 
     const pass2Sync = await syncFullDatabaseToPg(adapter, initialVillageDatabase);
     assert.equal(pass2Sync.totalRows, pass1Sync.totalRows, 'Jumlah baris tidak boleh bertambah/duplikat');

@@ -488,6 +488,9 @@ const cachedDbMemory = new Map<string, VillageDatabase>();
 async function initPostgres(initialDb: VillageDatabase): Promise<void> {
   const isProd = process.env.NODE_ENV === 'production';
   const dbUrl = (process.env.DATABASE_URL || '').trim();
+  if (isProd && !process.env.DEFAULT_ADMIN_PASSWORD) {
+    console.warn('[SECURITY] DEFAULT_ADMIN_PASSWORD is not set. Using insecure default is discouraged in production.');
+  }
 
   // 1. Try native pg.Pool when DATABASE_URL is postgresql://
   if (dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')) {
@@ -1763,25 +1766,65 @@ async function startServer() {
     return;
   });
 
-  const citizenOtpStore = new Map<string, { otp: string; expires: number; attempts: number }>();
+  const citizenOtpStore = new Map<string, { otp: string; expires: number; attempts: number; lastRequest?: number }>();
 
   app.post('/api/citizen/otp/request', loginRateLimiter, async (req, res) => {
     const nik = String(req.body?.nik || '').trim();
     if (!/^\d{16}$/.test(nik)) return res.status(400).json({ status: 'error', error: 'NIK harus 16 digit.' });
-    const citizen = await getCitizenByNik(nik);
-    if (!citizen) return res.status(404).json({ status: 'error', error: 'Data warga tidak ditemukan.' });
-    const otp = String(crypto.randomInt(100000, 1000000));
-    citizenOtpStore.set(nik, { otp, expires: Date.now() + 5 * 60 * 1000, attempts: 0 });
-    const tenantId = tenantStorage.getStore() || 'default';
-    if (pgAdapter) {
-      try {
-        await pgAdapter.query(
-          `INSERT INTO notification_outbox (tenant_id, channel, recipient, subject, message, status) VALUES ($1,'whatsapp',$2,NULL,$3,'pending')`,
-          [tenantId, citizen.phone || '', `Kode OTP login warga: ${otp} (berlaku 5 menit)`]
-        );
-      } catch {}
+
+    const now = Date.now();
+    const entry = citizenOtpStore.get(nik);
+    if (entry && entry.lastRequest && now - entry.lastRequest < 60000) {
+      return res.status(429).json({ status: 'error', error: 'Terlalu cepat. Coba lagi dalam 1 menit.' });
     }
-    res.json({ status: 'ok', message: 'OTP dikirim lewat outbox notifikasi.', ...(process.env.NODE_ENV !== 'production' ? { otp } : {}) });
+
+    const citizen = await getCitizenByNik(nik);
+    const tenantId = tenantStorage.getStore() || 'default';
+    const generic = { status: 'ok', message: 'Jika NIK terdaftar, kode OTP dikirim.' };
+
+    if (citizen) {
+      const otp = String(crypto.randomInt(100000, 1000000));
+      citizenOtpStore.set(nik, { otp, expires: now + 5 * 60 * 1000, attempts: 0, lastRequest: now });
+
+      if (!pgAdapter) {
+        if (process.env.NODE_ENV === 'production') {
+          return res.status(503).json({ status: 'error', error: 'Layanan OTP tidak tersedia.' });
+        }
+        return res.json({ ...generic, ...(process.env.NODE_ENV !== 'production' ? { otp } : {}) });
+      }
+
+      let outboxId = null;
+      const phone = String(citizen.phone || '').trim();
+      if (phone) {
+        try {
+          const r = await pgAdapter.query<any>(
+            `INSERT INTO notification_outbox (tenant_id, channel, recipient, subject, message, status) VALUES ($1,'whatsapp',$2,NULL,$3,'pending') RETURNING id`,
+            [tenantId, phone, `Kode OTP login warga: ${otp} (berlaku 5 menit)`]
+          );
+          outboxId = r.rows?.[0]?.id;
+        } catch (e) {
+          console.error('OTP outbox insert failed:', (e as any)?.message);
+          recordAudit('otp_request', 'system', 'OTP outbox insert failed');
+          return res.status(503).json({ status: 'error', error: 'Gagal mengirim OTP.' });
+        }
+      }
+
+      if (outboxId && phone) {
+        try {
+          if (hasWhatsAppProvider()) {
+            await dispatchWhatsApp({ tenant_id: tenantId, recipient: phone, message: `Kode OTP login warga: ${otp} (berlaku 5 menit)` });
+            await pgAdapter.query(`UPDATE notification_outbox SET status='sent', message='Kode OTP login warga: ******' WHERE id=$1`, [outboxId]);
+          } else {
+            await pgAdapter.query(`UPDATE notification_outbox SET status='logged', message='Kode OTP login warga: ******' WHERE id=$1`, [outboxId]);
+          }
+        } catch (e) {
+          console.error('OTP dispatch failed:', (e as any)?.message);
+          await pgAdapter.query(`UPDATE notification_outbox SET status='pending' WHERE id=$1`, [outboxId]).catch(() => {});
+        }
+      }
+    }
+
+    res.json({ ...generic, ...(process.env.NODE_ENV !== 'production' ? { otp: citizen ? citizenOtpStore.get(nik)?.otp : undefined } : {}) });
   });
 
   app.post('/api/citizen/otp/verify', loginRateLimiter, async (req, res) => {
@@ -1990,7 +2033,7 @@ async function startServer() {
     });
   });
 
-  app.post('/api/citizen/pay-bill', async (req, res) => {
+app.post('/api/citizen/pay-bill', async (req, res) => {
     const token = extractBearerToken(req);
     if (!token) {
       res.status(401).json({ status: 'error', error: 'Autentikasi warga diperlukan.' });
@@ -2025,22 +2068,92 @@ async function startServer() {
       res.status(404).json({ status: 'error', error: 'Tagihan pajak/retribusi tidak ditemukan.' });
       return;
     }
+    if (bills[targetIdx].status === 'Lunas') {
+      res.status(409).json({ status: 'error', error: 'Tagihan sudah Lunas.' });
+      return;
+    }
+
+    if (!pgAdapter) {
+      res.status(503).json({ status: 'error', error: 'PostgreSQL tidak tersedia.' });
+      return;
+    }
 
     const tenantId = tenantStorage.getStore() || 'default';
     const amount = Number(bills[targetIdx].amount || bills[targetIdx].total || 0);
-    if (pgAdapter) {
-      await pgAdapter.query(
-        `INSERT INTO payment_transactions (tenant_id, plan, amount, currency, provider, status)
-         VALUES ($1,$2,$3,'IDR','mock','pending')`,
-        [tenantId, `citizen-bill:${billId}`, amount]
-      );
+    const payerNik = session.username;
+
+    const existing = await pgAdapter.query<any>(
+      `SELECT * FROM citizen_bill_payments WHERE tenant_id=$1 AND bill_id=$2 AND status='pending' LIMIT 1`,
+      [tenantId, billId]
+    );
+    if (existing.rows.length > 0) {
+      res.json({ status: 'ok', payment: existing.rows[0], message: 'Pembayaran pending sudah ada.' });
+      return;
     }
 
-    res.json({
-      status: 'ok',
-      message: 'Pembayaran dicatat sebagai pending. Menunggu konfirmasi payment_transactions.',
-      bill: bills[targetIdx],
-    });
+    const ins = await pgAdapter.query<any>(
+      `INSERT INTO citizen_bill_payments (tenant_id, bill_id, kk, payer_nik, amount, status)
+       VALUES ($1,$2,$3,$4,$5,'pending') RETURNING *`,
+      [tenantId, billId, kk, payerNik, amount]
+    );
+    res.json({ status: 'ok', payment: ins.rows[0], message: 'Pembayaran dicatat sebagai pending.' });
+  });
+
+
+  // GET citizen bills for session
+  app.get('/api/citizen/bills', async (req, res) => {
+    const token = extractBearerToken(req);
+    if (!token) { res.status(401).json({ status: 'error', error: 'Autentikasi warga diperlukan.' }); return; }
+    const session = await resolveSessionFromToken(token);
+    if (!session || session.roleTier !== 'warga' || (session.tenantId || 'default') !== (tenantStorage.getStore() || 'default')) {
+      res.status(401).json({ status: 'error', error: 'Sesi warga tidak valid.' }); return;
+    }
+    const requester = await getCitizenByNik(session.username);
+    if (!requester) { res.status(404).json({ status: 'error', error: 'Data warga tidak ditemukan.' }); return; }
+    const kk = String(requester.kk || '').trim();
+    const db = await ensureDatabase();
+    const bills = ((db.siteConfig as any).citizenTaxBills || []).filter((b: any) => b.kk === kk);
+    res.json({ status: 'ok', bills });
+  });
+
+  // Admin confirm citizen bill payment
+  app.post('/api/admin/citizen-bills/:billId/confirm', requireAdmin, async (req, res) => {
+    const billId = String(req.params.billId || '').trim();
+    if (!billId) { res.status(400).json({ status: 'error', error: 'ID tagihan wajib diisi.' }); return; }
+    if (!pgAdapter) { res.status(503).json({ status: 'error', error: 'PostgreSQL tidak tersedia.' }); return; }
+    const tenantId = tenantStorage.getStore() || 'default';
+    // find pending payment
+    const payRes = await pgAdapter.query<any>(`SELECT * FROM citizen_bill_payments WHERE tenant_id=$1 AND bill_id=$2 AND status='pending' LIMIT 1`, [tenantId, billId]);
+    if (payRes.rows.length === 0) { res.status(404).json({ status: 'error', error: 'Pembayaran pending tidak ditemukan.' }); return; }
+    const payment = payRes.rows[0];
+    const receiptCode = `KWT-DESA-${Date.now().toString().slice(-6)}`;
+    const paidAt = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' WIB';
+    await pgAdapter.query(`UPDATE citizen_bill_payments SET status='paid', receipt_code=$1, updated_at=NOW() WHERE id=$2`, [receiptCode, payment.id]);
+    // update bill in siteConfig
+    const db = await ensureDatabase();
+    const bills = (db.siteConfig as any).citizenTaxBills || [];
+    const idx = bills.findIndex((b: any) => b.id === billId && b.kk === payment.kk);
+    if (idx !== -1) {
+      bills[idx] = { ...bills[idx], status: 'Lunas', paidAt, receiptCode };
+      (db.siteConfig as any).citizenTaxBills = [...bills];
+      db.version = (db.version || 8) + 1;
+      await saveDatabase(db, 'siteConfig');
+    }
+    const session = (req as any).adminSession;
+    recordAudit('citizen_bill_confirm', session?.username || 'admin', `Konfirmasi pembayaran tagihan ${billId}`);
+    res.json({ status: 'ok', payment: { ...payment, status: 'paid', receipt_code: receiptCode }, receiptCode });
+  });
+
+  // Admin reject citizen bill payment
+  app.post('/api/admin/citizen-bills/:billId/reject', requireAdmin, async (req, res) => {
+    const billId = String(req.params.billId || '').trim();
+    if (!billId) { res.status(400).json({ status: 'error', error: 'ID tagihan wajib diisi.' }); return; }
+    if (!pgAdapter) { res.status(503).json({ status: 'error', error: 'PostgreSQL tidak tersedia.' }); return; }
+    const tenantId = tenantStorage.getStore() || 'default';
+    await pgAdapter.query(`UPDATE citizen_bill_payments SET status='failed', updated_at=NOW() WHERE tenant_id=$1 AND bill_id=$2 AND status='pending'`, [tenantId, billId]);
+    const session = (req as any).adminSession;
+    recordAudit('citizen_bill_reject', session?.username || 'admin', `Penolakan pembayaran tagihan ${billId}`);
+    res.json({ status: 'ok', message: 'Pembayaran ditolak.' });
   });
 
   app.post('/api/citizen/logout', async (req, res) => {
