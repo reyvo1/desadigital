@@ -59,14 +59,14 @@ jobs:
           done
           curl -sf http://127.0.0.1:3000/api/health
 
+      - name: Seed dummy data
+        run: node scripts/seed-dummy.mjs
+
       - name: Smoke test
         run: npm run smoke
 
       - name: Security regression
         run: npm run security
-
-      - name: Seed dummy data
-        run: node scripts/seed-dummy.mjs
 
       - name: Full UAT simulation
         run: npm run uat:full
