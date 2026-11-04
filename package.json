@@ -14,6 +14,8 @@
     "backup": "node scripts/backup.mjs",
     "smoke": "node scripts/smoke.mjs",
     "security": "node scripts/security-regression.mjs",
+    "uat": "npm run lint && npm test && npm run build",
+    "uat:server": "npm run dev & sleep 15 && npm run smoke && npm run security",
     "migrate:pg": "tsx scripts/migrate-to-pg.mjs"
   },
   "dependencies": {
