@@ -1,6 +1,6 @@
 {
-  "version": 113,
-  "lastUpdated": "2026-11-04T07:44:11.251Z",
+  "version": 116,
+  "lastUpdated": "2026-11-04T07:50:14.567Z",
   "siteConfig": {
     "villageName": "Desa Sukamaju",
     "subDistrict": "Kecamatan Megamendung",
@@ -363,15 +363,15 @@
       }
     ],
     "aiQuotaMonthly": 1000000,
-    "aiUsedMonthly": 28,
+    "aiUsedMonthly": 36,
     "citizenTaxBills": [
       {
         "id": "bill-sec-a",
         "kk": "3201100000000000",
         "amount": 100000,
         "status": "Lunas",
-        "paidAt": "2026-11-04 07:44 WIB",
-        "receiptCode": "KWT-DESA-251114"
+        "paidAt": "2026-11-04 07:49 WIB",
+        "receiptCode": "KWT-DESA-590297"
       },
       {
         "id": "bill-sec-b",
@@ -29363,6 +29363,32 @@
       "verifiedDukcapil": true,
       "bloodType": "O",
       "lastUpdated": "2026-11-04"
+    },
+    {
+      "id": "cit-kk-1793778612110",
+      "nik": "3201793778612097",
+      "kk": "3201100000000000",
+      "name": "UAT Anggota",
+      "familyRole": "Anak",
+      "gender": "Laki-laki",
+      "birthPlace": "Bogor",
+      "birthDate": "2026-11-04",
+      "age": 0,
+      "maritalStatus": "Belum Kawin",
+      "religion": "Islam",
+      "education": "Tidak/Belum Sekolah",
+      "occupation": "Belum / Tidak Bekerja",
+      "dusun": "Dusun 1",
+      "rt": "001",
+      "rw": "001",
+      "address": "Alamat 0",
+      "phone": "081210000000",
+      "aidStatus": "Non-Penerima",
+      "tpsNumber": "TPS 001",
+      "lifeStatus": "Hidup",
+      "verifiedDukcapil": true,
+      "bloodType": "O",
+      "lastUpdated": "2026-11-04"
     }
   ],
   "requests": [
@@ -34796,6 +34822,86 @@
   ],
   "auditLogs": [
     {
+      "id": "audit-1793778611996-e5oc",
+      "timestamp": "2026-11-04T07:50:11.996Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778590391-4iqx",
+      "timestamp": "2026-11-04T07:49:50.391Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "citizen_bill_confirm",
+      "module": "Keamanan",
+      "encryptionHash": "f35bb0ed593eb5643e8ac3a06d33e728bee55959548d3977d07481ba66353e2f",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778589841-ku2z",
+      "timestamp": "2026-11-04T07:49:49.841Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778589541-l1pn",
+      "timestamp": "2026-11-04T07:49:49.541Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "patch_siteConfig",
+      "module": "Keamanan",
+      "encryptionHash": "7a5739099a138c82c4908aafd277a55cb897f8dde9643b799eb2e405ff7e73c6",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778589415-dyhl",
+      "timestamp": "2026-11-04T07:49:49.415Z",
+      "actor": "pelayanan",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "da2b4ae4259cedb8a74d57e1145282fccaae7ffffcf7771d0f5c5eb30255d25e",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778589312-rrvo",
+      "timestamp": "2026-11-04T07:49:49.312Z",
+      "actor": "kades",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "0e69a7a835afb85eb0b5af7874e861a2d3a918468ee5aab7c5681691372ff5d0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778589124-tree",
+      "timestamp": "2026-11-04T07:49:49.124Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793778588999-4m3v",
+      "timestamp": "2026-11-04T07:49:48.999Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
       "id": "audit-1793778251251-hqso",
       "timestamp": "2026-11-04T07:44:11.251Z",
       "actor": "admin",
@@ -35644,11 +35750,33 @@
       "message": "tes",
       "timestamp": "2026-11-04 15:44",
       "isRead": false
+    },
+    {
+      "id": "chat-1793778589719-is0p",
+      "sessionId": "sess-b32620213833a433aecd006d8ce82029",
+      "senderName": "Warga Desa",
+      "senderPhone": "-",
+      "senderRole": "citizen",
+      "channel": "web",
+      "message": "tes",
+      "timestamp": "2026-11-04 15:49",
+      "isRead": false
     }
   ],
   "incomingOutboxLetters": [],
   "villageAssets": [],
   "populationMutations": [
+    {
+      "id": "mut-kk-1793778612110",
+      "nik": "3201793778612097",
+      "kk": "3201100000000000",
+      "citizenName": "UAT Anggota (KK: Warga Dummy 0)",
+      "mutationType": "KELAHIRAN",
+      "date": "2026-11-04",
+      "dusun": "Dusun 1",
+      "rtRw": "RT 001 / RW 001",
+      "notes": "Dilaporkan mandiri melalui Portal Kepala Keluarga (Warga Dummy 0)."
+    },
     {
       "id": "mut-kk-1793772029068",
       "nik": "3201793772029054",

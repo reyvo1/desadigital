@@ -245,6 +245,22 @@ async function main() {
     if (res.status !== 404) throw new Error(`status ${res.status} (harus 404)`);
   });
 
+  await check('cross-tenant warga -> 401', async () => {
+    if (!citizenTok) throw new Error('no citizen token');
+    // tenant B base URL not available; use ?tenant=tenantb
+    const res = await fetch(`${BASE_URL}/api/citizen/pay-bill?tenant=tenantb`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(citizenTok) },
+      body: JSON.stringify({ billId: 'bill-sec-a' }),
+    });
+    if (res.status !== 401) throw new Error(`status ${res.status} (harus 401)`);
+  });
+
+  await check('OTP enumerasi: status identik', async () => {
+    const r1 = await fetch(`${BASE_URL}/api/citizen/otp/request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nik: '3201100000000001' }) });
+    const r2 = await fetch(`${BASE_URL}/api/citizen/otp/request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nik: '3201999999999999' }) });
+    if (r1.status !== r2.status) throw new Error(`status ${r1.status} vs ${r2.status}`);
+  });
+
   if (process.exitCode) {
     console.error('Security regression: GAGAL');
   } else {

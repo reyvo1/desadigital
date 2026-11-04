@@ -2138,7 +2138,16 @@ app.post('/api/citizen/pay-bill', async (req, res) => {
     const kk = String(requester.kk || '').trim();
     const db = await ensureDatabase();
     const bills = ((db.siteConfig as any).citizenTaxBills || []).filter((b: any) => b.kk === kk);
-    res.json({ status: 'ok', bills });
+
+    // attach latest payment status
+    let payments = [];
+    if (pgAdapter) {
+      const pr = await pgAdapter.query<any>(`SELECT DISTINCT ON (bill_id) bill_id, status FROM citizen_bill_payments WHERE tenant_id=$1 AND kk=$2 ORDER BY bill_id, created_at DESC`, [tenantStorage.getStore() || 'default', kk]);
+      payments = pr.rows || [];
+    }
+    const pmap = new Map(payments.map((p: any) => [p.bill_id, p.status]));
+    const enriched = bills.map((b: any) => ({ ...b, paymentStatus: pmap.get(b.id) || 'none' }));
+    res.json({ status: 'ok', bills: enriched });
   });
 
   // Admin confirm citizen bill payment
@@ -2156,7 +2165,7 @@ app.post('/api/citizen/pay-bill', async (req, res) => {
     const payRes = await pgAdapter.query<any>(`SELECT * FROM citizen_bill_payments WHERE tenant_id=$1 AND bill_id=$2 AND status='pending' LIMIT 1`, [tenantId, billId]);
     if (payRes.rows.length === 0) { res.status(404).json({ status: 'error', error: 'Pembayaran pending tidak ditemukan.' }); return; }
     const payment = payRes.rows[0];
-    const receiptCode = `KWT-DESA-${Date.now().toString().slice(-6)}`;
+    const receiptCode = `KWT-DESA-${Date.now().toString().slice(-6)}-${crypto.randomBytes(3).toString('hex')}`;
     const paidAt = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' WIB';
     const upd = await pgAdapter.query<any>(`UPDATE citizen_bill_payments SET status='paid', receipt_code=$1, updated_at=NOW() WHERE id=$2 AND status='pending' RETURNING *`, [receiptCode, payment.id]);
     if (upd.rows.length === 0) { res.status(409).json({ status: 'error', error: 'Pembayaran sudah diproses.' }); return; }
