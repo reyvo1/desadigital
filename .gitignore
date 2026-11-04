@@ -12,3 +12,4 @@ data/pgdata/
 data/pgdata-server/
 data/backups/
 .env
+data/.instance.lock
