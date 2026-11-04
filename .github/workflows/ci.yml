@@ -71,6 +71,9 @@ jobs:
       - name: Full UAT simulation
         run: npm run uat:full
 
+      - name: Scenario suite (Phase 2)
+        run: npm run scenarios
+
       - name: Build
         run: npm run build
 
