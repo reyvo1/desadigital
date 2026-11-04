@@ -26,7 +26,7 @@ async function main() {
   ok(res.ok && adminToken, 'admin login');
 
   // 3. Citizen OTP login
-  const nik = '3201141205820001';
+  const nik = '3201100000000000';
   res = await fetch(`${BASE}/api/citizen/otp/request`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nik }),
@@ -44,7 +44,7 @@ async function main() {
   ok(res.ok && citizenToken, 'citizen otp verify');
 
   // 4. Citizen family-member add
-  const newNik = '3201141205829998';
+  const newNik = '3201' + String(Date.now()).slice(-12);
   res = await fetch(`${BASE}/api/citizen/family-member`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${citizenToken}` },

@@ -65,6 +65,9 @@ jobs:
       - name: Security regression
         run: npm run security
 
+      - name: Seed dummy data
+        run: node scripts/seed-dummy.mjs
+
       - name: Full UAT simulation
         run: npm run uat:full
 
