@@ -23,6 +23,13 @@ const TenantOnboardingModal = lazy(() =>
   import('./components/TenantOnboardingModal').then((m) => ({ default: m.TenantOnboardingModal }))
 );
 
+const CitizenPortalView = lazy(() =>
+  import('./views/CitizenPortalView').then((m) => ({ default: m.CitizenPortalView }))
+);
+const SaasPlatformView = lazy(() =>
+  import('./views/SaasPlatformView').then((m) => ({ default: m.SaasPlatformView }))
+);
+
 import { LetterRequestModal } from './components/LetterRequestModal';
 import { LetterTrackingModal } from './components/LetterTrackingModal';
 import { OfficialLetterView } from './components/OfficialLetterView';
@@ -923,11 +930,60 @@ const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
           />
         )}
 
+        {activeTab === 'portalwarga' && (
+          <Suspense fallback={<div className="text-xs text-gray-500 p-4">Memuat...</div>}>
+            {citizenUser ? (
+              <CitizenPortalView
+                sessionUser={{
+                  nik: citizenUser.nik,
+                  name: citizenUser.name,
+                  kk: citizenUser.kk,
+                  dusun: citizenUser.dusun,
+                  role: 'Warga',
+                }}
+                citizens={citizens}
+                onUpdateCitizens={setCitizens}
+                requests={requests}
+                onSubmitNewRequest={handleSubmitNewRequest}
+                letterTypes={letterTypes}
+                agendas={agendas}
+                aspirations={aspirations}
+                onUpdateAspirations={setAspirations}
+                populationMutations={populationMutations}
+                onUpdatePopulationMutations={setPopulationMutations}
+                siteConfig={siteConfig}
+                onUpdateSiteConfig={setSiteConfig}
+                onPreviewOfficialLetter={(req) => setViewingOfficialLetter(req)}
+                onOpenQrVerifyModal={(req) => {
+                  setQrVerifyTargetRequest(req || null);
+                  setIsQrVerifyModalOpen(true);
+                }}
+                onLogoutCitizen={() => {
+                  setCitizenUser(null);
+                  setCitizenToken('');
+                  try { localStorage.removeItem('sid_desa_citizen_token'); } catch {}
+                }}
+                onShowToast={(title, msg) => showToast(title, msg, 'success')}
+              />
+            ) : (
+              <div className="p-6 text-center text-sm text-gray-500">
+                Silakan login sebagai warga melalui tombol Portal Warga di navbar.
+              </div>
+            )}
+          </Suspense>
+        )}
+
         {activeTab === 'admin' && adminUser && adminUser.isPlatformAdmin && (
           <Suspense fallback={<div className="text-xs text-gray-500 p-4">Memuat...</div>}>
             <TenantManagementView
               adminToken={adminToken}
               onShowToast={(title, msg) => showToast(title, msg, 'success')}
+            />
+            <SaasPlatformView
+              siteConfig={siteConfig}
+              onUpdateSiteConfig={setSiteConfig}
+              onShowToast={(title, msg) => showToast(title, msg, 'success')}
+              onNavigateHome={() => setActiveTab('beranda')}
             />
           </Suspense>
         )}

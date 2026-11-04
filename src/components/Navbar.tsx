@@ -25,6 +25,7 @@ export type NavTab =
   | 'peta'
   | 'lapak'
   | 'kontak'
+  | 'portalwarga'
   | 'admin';
 
 interface NavbarProps {
@@ -72,8 +73,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'peta', label: t.nav.map },
     { id: 'lapak', label: t.nav.market },
     { id: 'kontak', label: t.nav.contact },
+    { id: 'portalwarga', label: 'Portal Warga' },
   ];
-
   const handleNavClick = (tab: NavTab) => {
     onSelectTab(tab);
     setMobileMenuOpen(false);

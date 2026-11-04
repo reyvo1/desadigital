@@ -967,6 +967,28 @@ async function getCitizenByNik(nik: string): Promise<any | null> {
   }
 }
 
+export function consumeTenantAiQuota(
+  db: VillageDatabase,
+  tenantId?: string
+): { allowed: boolean; used: number; quota: number; tenantId: string } {
+  const targetId = tenantId || tenantStorage.getStore() || 'default';
+  const quota =
+    typeof db.siteConfig?.aiQuotaMonthly === 'number' ? db.siteConfig.aiQuotaMonthly : 1000;
+  const currentUsed =
+    typeof db.siteConfig?.aiUsedMonthly === 'number' ? db.siteConfig.aiUsedMonthly : 0;
+
+  if (currentUsed >= quota) {
+    return { allowed: false, used: currentUsed, quota, tenantId: targetId };
+  }
+
+  const nextUsed = currentUsed + 1;
+  if (db.siteConfig) {
+    db.siteConfig.aiQuotaMonthly = quota;
+    db.siteConfig.aiUsedMonthly = nextUsed;
+  }
+  return { allowed: true, used: nextUsed, quota, tenantId: targetId };
+}
+
 function hasEmailProvider(): boolean {
   const p = (process.env.EMAIL_PROVIDER || '').toLowerCase();
   if (p === 'sendgrid' && process.env.SENDGRID_API_KEY) return true;
@@ -1748,7 +1770,7 @@ async function startServer() {
     if (!/^\d{16}$/.test(nik)) return res.status(400).json({ status: 'error', error: 'NIK harus 16 digit.' });
     const citizen = await getCitizenByNik(nik);
     if (!citizen) return res.status(404).json({ status: 'error', error: 'Data warga tidak ditemukan.' });
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otp = String(crypto.randomInt(100000, 1000000));
     citizenOtpStore.set(nik, { otp, expires: Date.now() + 5 * 60 * 1000, attempts: 0 });
     res.json({ status: 'ok', message: 'OTP dikirim (dev: lihat otp).', ...(process.env.NODE_ENV !== 'production' ? { otp } : {}) });
   });
@@ -1844,6 +1866,170 @@ async function startServer() {
     db.citizens[idx].lastUpdated = new Date().toISOString();
     await saveDatabase(db);
     res.json({ status: 'ok', citizen: db.citizens[idx] });
+  });
+
+  app.post('/api/citizen/family-member', async (req, res) => {
+    const token = extractBearerToken(req);
+    if (!token) {
+      res.status(401).json({ status: 'error', error: 'Autentikasi warga diperlukan.' });
+      return;
+    }
+    const session = await resolveSessionFromToken(token);
+    if (!session || session.roleTier !== 'warga' || (session.tenantId || 'default') !== (tenantStorage.getStore() || 'default')) {
+      res.status(401).json({ status: 'error', error: 'Sesi warga tidak valid.' });
+      return;
+    }
+
+    const requester = await getCitizenByNik(session.username);
+    if (!requester) {
+      res.status(404).json({ status: 'error', error: 'Data warga tidak ditemukan.' });
+      return;
+    }
+    const kk = String(requester.kk || '').trim();
+    if (!/^\d{16}$/.test(kk)) {
+      res.status(400).json({ status: 'error', error: 'Nomor KK warga tidak valid.' });
+      return;
+    }
+
+    const {
+      nik = '',
+      name = '',
+      familyRole = 'Anak',
+      gender = 'Laki-laki',
+      birthPlace = '',
+      birthDate = '',
+      education = 'Tidak/Belum Sekolah',
+      occupation = 'Belum / Tidak Bekerja',
+      mutationType = 'KELAHIRAN',
+      phone = '',
+    } = req.body || {};
+
+    const cleanNik = String(nik).replace(/\\s+/g, '').trim();
+    const cleanName = String(name).trim();
+    if (!/^\d{16}$/.test(cleanNik) || cleanName.length < 2) {
+      res.status(400).json({ status: 'error', error: 'NIK Anggota Baru (16 digit) dan Nama Lengkap wajib diisi dengan benar.' });
+      return;
+    }
+
+    const db = await ensureDatabase();
+    if ((db.citizens || []).some((c: any) => c.nik === cleanNik)) {
+      res.status(400).json({ status: 'error', error: `NIK ${cleanNik} sudah terdaftar di Buku Induk Penduduk Desa.` });
+      return;
+    }
+
+    const head = (db.citizens || []).find((c: any) => c.kk === kk) || requester;
+    const dusun = head?.dusun || requester.dusun || db.siteConfig.defaults?.dusun || 'Dusun 1';
+    const rt = head?.rt || requester.rt || '001';
+    const rw = head?.rw || requester.rw || '001';
+    const address = head?.address || requester.address || `Wilayah ${dusun}`;
+    const bDate = /^\\d{4}-\\d{2}-\\d{2}$/.test(String(birthDate))
+      ? String(birthDate)
+      : new Date().toISOString().slice(0, 10);
+    const birthYear = Number(bDate.slice(0, 4));
+    const age = Math.max(0, new Date().getFullYear() - (Number.isNaN(birthYear) ? new Date().getFullYear() : birthYear));
+
+    const newCitizen: any = {
+      id: `cit-kk-${Date.now()}`,
+      nik: cleanNik,
+      kk,
+      name: cleanName,
+      familyRole: familyRole as any,
+      gender: gender === 'Perempuan' ? 'Perempuan' : 'Laki-laki',
+      birthPlace: String(birthPlace || requester.birthPlace || 'Bogor').trim(),
+      birthDate: bDate,
+      age,
+      maritalStatus: familyRole === 'Istri' || familyRole === 'Kepala Keluarga' ? 'Kawin' : 'Belum Kawin',
+      religion: head?.religion || requester.religion || 'Islam',
+      education: education as any,
+      occupation: String(occupation || 'Belum / Tidak Bekerja'),
+      dusun,
+      rt,
+      rw,
+      address,
+      phone: String(phone || head?.phone || requester.phone || '081200000000').trim(),
+      aidStatus: 'Non-Penerima',
+      tpsNumber: head?.tpsNumber || requester.tpsNumber || 'TPS 001',
+      lifeStatus: 'Hidup',
+      verifiedDukcapil: true,
+      bloodType: 'O',
+      lastUpdated: new Date().toISOString().slice(0, 10),
+    };
+
+    const newMutation: any = {
+      id: `mut-kk-${Date.now()}`,
+      nik: cleanNik,
+      kk,
+      citizenName: `${cleanName} (KK: ${head?.name || requester.name || kk})`,
+      mutationType: mutationType === 'DATANG_MASUK' ? 'DATANG_MASUK' : 'KELAHIRAN',
+      date: new Date().toISOString().slice(0, 10),
+      dusun,
+      rtRw: `RT ${rt} / RW ${rw}`,
+      notes: `Dilaporkan mandiri melalui Portal Kepala Keluarga (${requester.name || kk}).`,
+    };
+
+    db.citizens = [...(db.citizens || []), newCitizen];
+    db.populationMutations = [newMutation, ...(db.populationMutations || [])];
+    db.version = (db.version || 8) + 1;
+    await saveDatabase(db);
+
+    res.json({
+      status: 'ok',
+      citizen: newCitizen,
+      mutation: newMutation,
+      citizens: db.citizens,
+      populationMutations: db.populationMutations,
+    });
+  });
+
+  app.post('/api/citizen/pay-bill', async (req, res) => {
+    const token = extractBearerToken(req);
+    if (!token) {
+      res.status(401).json({ status: 'error', error: 'Autentikasi warga diperlukan.' });
+      return;
+    }
+    const session = await resolveSessionFromToken(token);
+    if (!session || session.roleTier !== 'warga' || (session.tenantId || 'default') !== (tenantStorage.getStore() || 'default')) {
+      res.status(401).json({ status: 'error', error: 'Sesi warga tidak valid.' });
+      return;
+    }
+
+    const requester = await getCitizenByNik(session.username);
+    if (!requester) {
+      res.status(404).json({ status: 'error', error: 'Data warga tidak ditemukan.' });
+      return;
+    }
+    const kk = String(requester.kk || '').trim();
+    const billId = String(req.body?.billId || '').trim();
+    if (!billId) {
+      res.status(400).json({ status: 'error', error: 'ID tagihan wajib diisi.' });
+      return;
+    }
+
+    const db = await ensureDatabase();
+    const bills = (db.siteConfig as any).citizenTaxBills || [];
+    const targetIdx = bills.findIndex((b: any) => b.id === billId && (!kk || b.kk === kk));
+    if (targetIdx === -1) {
+      res.status(404).json({ status: 'error', error: 'Tagihan pajak/retribusi tidak ditemukan.' });
+      return;
+    }
+
+    const paidAt = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' WIB';
+    const receiptCode = `KWT-DESA-${Date.now().toString().slice(-6)}`;
+    bills[targetIdx] = {
+      ...bills[targetIdx],
+      status: 'Lunas',
+      paidAt,
+      receiptCode,
+    };
+    (db.siteConfig as any).citizenTaxBills = [...bills];
+    db.version = (db.version || 8) + 1;
+    await saveDatabase(db, 'siteConfig');
+
+    res.json({
+      status: 'ok',
+      bill: bills[targetIdx],
+      citizenTaxBills: (db.siteConfig as any).citizenTaxBills,
+    });
   });
 
   app.post('/api/citizen/logout', async (req, res) => {
@@ -3429,6 +3615,11 @@ app.post('/api/chat', strictRateLimiter(20), async (req, res) => {
     q.count += 1;
     aiQuotaStore.set(tenantId + ':ai', q);
     const db = ensureDatabase();
+    const quotaCheck = consumeTenantAiQuota(db, tenantId);
+    if (!quotaCheck.allowed) {
+      return res.status(429).json({ error: 'Kuota AI bulanan tenant tercapai.', used: quotaCheck.used, quota: quotaCheck.quota });
+    }
+    try { await saveDatabase(db, 'siteConfig'); } catch {}
     const result = await generateVillageAiAnswer(prompt, db);
     res.json({
       status: 'ok',
@@ -4096,6 +4287,43 @@ app.post('/api/chat', strictRateLimiter(20), async (req, res) => {
     await saveDatabase(fresh);
     recordAudit('reset_db', 'admin', 'Database reset to factory');
     res.json({ status: 'ok', db: sanitizeDbForClient(fresh, true) });
+  });
+
+  // SaaS billing endpoints (registered before Vite SPA fallback)
+  app.post('/api/saas/invoices/:id/pay', requirePlatformAdmin, async (req, res) => {
+    const invoiceId = String(req.params.id || '').trim();
+    const { sp2dNumber = '', paymentChannel = 'SP2D Kasda Bank Daerah (BPD)', verifiedBy = 'Bendahara & Auditor SaaS' } = req.body || {};
+    if (!invoiceId) { res.status(400).json({ status: 'error', error: 'ID Faktur wajib diisi.' }); return; }
+    if (!pgAdapter) { res.status(503).json({ status: 'error', error: 'PostgreSQL tidak tersedia.' }); return; }
+    try {
+      const invLookup = await pgAdapter.query<any>('SELECT * FROM saas_invoices WHERE id = $1 LIMIT 1;', [invoiceId]);
+      if (invLookup.rows.length === 0) { res.status(404).json({ status: 'error', error: 'Faktur tidak ditemukan di PostgreSQL.' }); return; }
+      const inv = invLookup.rows[0];
+      const nowFormatted = `${new Date().toISOString().slice(0, 10)} ${new Date().toTimeString().slice(0, 5)} WIB`;
+      const sp2d = String(sp2dNumber).trim() || `SP2D-DESA-${Date.now().toString().slice(-6)}`;
+      const channel = String(paymentChannel).trim() || 'SP2D Kasda Bank Daerah (BPD)';
+      const verifier = String(verifiedBy).trim() || 'Bendahara & Auditor SaaS';
+      await pgAdapter.query(`UPDATE saas_invoices SET status = 'Lunas', paid_at = $1, payment_method = $2, sp2d_reference = $3, updated_at = NOW() WHERE id = $4;`, [nowFormatted, channel, sp2d, invoiceId]);
+      const paymentRecord = { id: `pay-${Date.now()}`, invoiceId: inv.id, invoiceNumber: inv.invoice_number || inv.invoiceNumber, tenantId: inv.tenant_id || inv.tenantId, villageName: inv.village_name || inv.villageName, paymentReference: `TRX-KASDA-${Date.now().toString().slice(-6)}`, sp2dNumber: sp2d, paymentChannel: channel, amountRupiah: Number(inv.total_amount_rupiah ?? inv.totalAmountRupiah ?? 0), status: 'Terverifikasi', verifiedBy: verifier, paidAt: nowFormatted, proofMetadata: { sp2dNumber: sp2d, verifiedBy: verifier, channel } };
+      await pgAdapter.query(`INSERT INTO saas_payments (id, invoice_id, invoice_number, tenant_id, village_name, payment_reference, sp2d_number, payment_channel, amount_rupiah, status, verified_by, paid_at, proof_metadata) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb);`, [paymentRecord.id, paymentRecord.invoiceId, paymentRecord.invoiceNumber, paymentRecord.tenantId, paymentRecord.villageName, paymentRecord.paymentReference, paymentRecord.sp2dNumber, paymentRecord.paymentChannel, paymentRecord.amountRupiah, paymentRecord.status, paymentRecord.verifiedBy, paymentRecord.paidAt, JSON.stringify(paymentRecord.proofMetadata)]);
+      await pgAdapter.query(`INSERT INTO saas_billing_events (id, tenant_id, invoice_id, event_type, actor, description, payload) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb);`, [`evt-${Date.now()}`, paymentRecord.tenantId, invoiceId, 'INVOICE_PAID_SP2D', verifier, `Pelunasan Faktur ${paymentRecord.invoiceNumber} (${paymentRecord.villageName}) via ${channel} (${sp2d})`, JSON.stringify({ sp2dNumber: sp2d, amountRupiah: paymentRecord.amountRupiah, paymentChannel: channel })]);
+      res.json({ status: 'ok', invoice: { ...inv, status: 'Lunas', paid_at: nowFormatted, sp2d_reference: sp2d }, payment: paymentRecord });
+    } catch (error: any) {
+      res.status(500).json({ status: 'error', error: error.message || 'Gagal mencatat pembayaran SaaS.' });
+    }
+  });
+
+  app.get('/api/saas/billing', async (req, res) => {
+    const tenantIdFilter = req.query?.tenantId ? String(req.query.tenantId).trim() : undefined;
+    if (!pgAdapter) { res.json({ status: 'ok', plans: [], subscriptions: [], invoices: [] }); return; }
+    try {
+      const plansRes = await pgAdapter.query<any>('SELECT * FROM saas_plans ORDER BY annual_price_rupiah ASC;').catch(() => ({ rows: [] }));
+      const subsRes = await pgAdapter.query<any>(tenantIdFilter ? 'SELECT * FROM saas_subscriptions WHERE tenant_id = $1 ORDER BY created_at DESC;' : 'SELECT * FROM saas_subscriptions ORDER BY created_at DESC;', tenantIdFilter ? [tenantIdFilter] : []).catch(() => ({ rows: [] }));
+      const invRes = await pgAdapter.query<any>(tenantIdFilter ? 'SELECT * FROM saas_invoices WHERE tenant_id = $1 ORDER BY created_at DESC;' : 'SELECT * FROM saas_invoices ORDER BY created_at DESC;', tenantIdFilter ? [tenantIdFilter] : []).catch(() => ({ rows: [] }));
+      res.json({ status: 'ok', plans: plansRes.rows, subscriptions: subsRes.rows, invoices: invRes.rows });
+    } catch (error: any) {
+      res.status(500).json({ status: 'error', error: error.message || 'Gagal memuat billing.' });
+    }
   });
 
   // Vite middleware for development or static serving for production

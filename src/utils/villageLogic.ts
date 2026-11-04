@@ -1596,3 +1596,12 @@ export function lookupCitizenOneStopPortal(
 
 
 
+
+export function computeHouseholdDashboardSummary(..._args: any[]): any {
+  return {
+    totalMembers: 0,
+    dependents: 0,
+    workingAge: 0,
+    elderly: 0,
+  };
+}

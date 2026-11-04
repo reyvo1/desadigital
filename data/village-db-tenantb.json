@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "lastUpdated": "2026-11-03T07:01:11.499Z",
+  "lastUpdated": "2026-11-04T04:02:46.266Z",
   "siteConfig": {
     "villageName": "Desa Sukamaju",
     "villageCode": "32.01.14.2005",
@@ -2417,24 +2417,504 @@
       "fullName": "Asep Saepudin, S.Kom",
       "role": "Sekretaris Desa / Super Admin SID",
       "nip": "19890719 201803 1 002",
-      "passwordHash": "scrypt$542cfbb6e0d64ac30b3b4ab590a73c24$078c181a2d0abe117431d16529f62767ff545e39814556dadba03a008badb1744344d916d2f23462eb056073785ac1a562ac2eb034b77c8d2fb29545538cc75c"
+      "passwordHash": "scrypt$34c199ec5d74b40432e2a76cb3837ec9$6112edd47bde1d906358268fc9d6355c9a0969ae419d384878c0936514f4706f7fe0544aab49068b93de69883bc323e11a8445074353503e3fe2a94f2099e642"
     },
     {
       "username": "kades",
       "fullName": "H. Rahmat Hidayat, S.IP., M.Si.",
       "role": "Kepala Desa (Otorisasi TTE)",
       "nip": "19780412 202101 1 001",
-      "passwordHash": "scrypt$e12d291d968b17587e63905983466124$3ba18ce9a25cd06b17f65c20a1755101a2e8b9e20efdaf64c33fe32f52a6078a7e6512a42cdedb0c7d6d904c4e50303be3f38f22523abf1083ec1f30c3a385c5"
+      "passwordHash": "scrypt$93d59b71ae46ac5af029dd36435224a6$d4fa8a5d55740cd52b76ee50e2f01e995647d41a6c772f9ad8957a02dc72725c3971be3df9ff098f5ec660128f38f4bd71fe7172cbb4cb51172222c7482bcd03"
     },
     {
       "username": "pelayanan",
       "fullName": "Dadan Ramdani, S.Sos",
       "role": "Kasi Pelayanan & Verifikator Dokumen",
       "nip": "19871103 201705 1 004",
-      "passwordHash": "scrypt$b800393ce74e54b550fc7df7675d7b05$c6aa3a1bdc2f9b4e3c496ccb88f4217070e737a4ab20cd96bb4a9a30788c7fcc32f4932efb8a349113a61af933b0523e150c8f76b26ec0cba3ae8238c21efb6c"
+      "passwordHash": "scrypt$95bf2d98835bab91b055ae80cfc4e4bc$2b80ebc886e96282b61d2c5055d939efe9db3a21bf4f4eec0a8e09f68a9c6ab2ea2a5357a659c9f1e829a6d7f640d7fa8e6d73330af952f0399198324830c260"
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit-1793764966266-k0tp",
+      "timestamp": "2026-11-04T04:02:46.266Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793764965706-ez66",
+      "timestamp": "2026-11-04T04:02:45.706Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793764281499-wza5",
+      "timestamp": "2026-11-04T03:51:21.499Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793764281010-fn67",
+      "timestamp": "2026-11-04T03:51:21.010Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793764253235-yqsr",
+      "timestamp": "2026-11-04T03:50:53.235Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793764252737-5hxl",
+      "timestamp": "2026-11-04T03:50:52.737Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793761988264-4r85",
+      "timestamp": "2026-11-04T03:13:08.264Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793761987761-yxpo",
+      "timestamp": "2026-11-04T03:13:07.761Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793761432245-1wc6",
+      "timestamp": "2026-11-04T03:03:52.245Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793761431567-dr0v",
+      "timestamp": "2026-11-04T03:03:51.567Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793760473574-cezz",
+      "timestamp": "2026-11-04T02:47:53.574Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793760472960-8jdc",
+      "timestamp": "2026-11-04T02:47:52.960Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793759968796-2xpl",
+      "timestamp": "2026-11-04T02:39:28.796Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793759967992-rru9",
+      "timestamp": "2026-11-04T02:39:27.992Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793728977066-3kuc",
+      "timestamp": "2026-11-03T18:02:57.066Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793728976553-2kjg",
+      "timestamp": "2026-11-03T18:02:56.553Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793726909922-j8a0",
+      "timestamp": "2026-11-03T17:28:29.922Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793726909398-660y",
+      "timestamp": "2026-11-03T17:28:29.398Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793724300162-4mh4",
+      "timestamp": "2026-11-03T16:45:00.162Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793724299321-z8pq",
+      "timestamp": "2026-11-03T16:44:59.321Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793724280796-wkf7",
+      "timestamp": "2026-11-03T16:44:40.796Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793724279673-bki3",
+      "timestamp": "2026-11-03T16:44:39.673Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793714513494-677p",
+      "timestamp": "2026-11-03T14:01:53.494Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793714512974-f9hz",
+      "timestamp": "2026-11-03T14:01:52.974Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793714418449-yyhn",
+      "timestamp": "2026-11-03T14:00:18.449Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793714417936-eu2i",
+      "timestamp": "2026-11-03T14:00:17.936Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793714091695-gehe",
+      "timestamp": "2026-11-03T13:54:51.695Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793714091240-cgdt",
+      "timestamp": "2026-11-03T13:54:51.240Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694974413-7f4s",
+      "timestamp": "2026-11-03T08:36:14.413Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694973950-l95k",
+      "timestamp": "2026-11-03T08:36:13.950Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694955463-u1ei",
+      "timestamp": "2026-11-03T08:35:55.463Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694955008-njbo",
+      "timestamp": "2026-11-03T08:35:55.008Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694861766-3aqd",
+      "timestamp": "2026-11-03T08:34:21.766Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694861237-f985",
+      "timestamp": "2026-11-03T08:34:21.237Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694817609-25p7",
+      "timestamp": "2026-11-03T08:33:37.609Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694817080-c7yq",
+      "timestamp": "2026-11-03T08:33:37.080Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694008454-5so8",
+      "timestamp": "2026-11-03T08:20:08.454Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793694007990-64aj",
+      "timestamp": "2026-11-03T08:20:07.990Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793693752104-3c9m",
+      "timestamp": "2026-11-03T08:15:52.104Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793693751618-pem5",
+      "timestamp": "2026-11-03T08:15:51.618Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793692491047-uas2",
+      "timestamp": "2026-11-03T07:54:51.047Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793692490576-pq84",
+      "timestamp": "2026-11-03T07:54:50.576Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793692482300-yokp",
+      "timestamp": "2026-11-03T07:54:42.300Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793691887093-lqbk",
+      "timestamp": "2026-11-03T07:44:47.093Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793691886522-5sxi",
+      "timestamp": "2026-11-03T07:44:46.522Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793691649299-gkrw",
+      "timestamp": "2026-11-03T07:40:49.299Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793691648738-pn7u",
+      "timestamp": "2026-11-03T07:40:48.738Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793691640525-yjeu",
+      "timestamp": "2026-11-03T07:40:40.525Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "eb64de57d5410293a24caf2ee7036ac2f1d8106c27fe8290d0273d6f3acae936",
+      "status": "Sukses"
+    },
     {
       "id": "log-01",
       "timestamp": "2026-03-18 10:22:14",

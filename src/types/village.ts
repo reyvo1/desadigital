@@ -74,6 +74,15 @@ export interface Citizen {
   passwordHash?: string;
 }
 
+export interface CitizenSessionUser {
+  nik: string;
+  name: string;
+  kk: string;
+  dusun: string;
+  role: string;
+  phone?: string;
+}
+
 export type LetterTypeCode =
   | 'SKU'
   | 'SKTM'
@@ -602,6 +611,9 @@ export interface VillageSiteConfig {
   tpsLocations?: TpsLocationInfo[];
   stuntingTargetPercent?: number;
   aiModel?: string;
+  aiQuotaMonthly?: number;
+  aiUsedMonthly?: number;
+  citizenTaxBills?: any[];
   defaultClassificationCode?: string;
   facilityCategoryColors?: Record<string, string>;
   defaults?: VillageSiteDefaults;

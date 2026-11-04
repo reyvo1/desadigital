@@ -3360,7 +3360,7 @@ export const VillageCMSView: React.FC<VillageCMSViewProps> = ({
                           setAdmPassword('');
                           setAdmFullName(u.fullName);
                           setAdmRole(u.role);
-                          setAdmNip(u.nip);
+                          setAdmNip(u.nip || '');
                           setIsAdminModalOpen(true);
                         }}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer"
