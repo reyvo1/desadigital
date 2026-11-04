@@ -37,6 +37,31 @@ async function main() {
   const tenantToken = await login('admin', 'desa2026', 'tenantb');
   const kadesToken = await login('kades', 'desa2026', null);
   const operatorToken = await login('pelayanan', 'layanan2026', null);
+  // Self-contained test data: ensure two citizens with different KK and bills exist
+  try {
+    const dbRes = await fetch(`${BASE_URL}/api/db`, { headers: { Authorization: `Bearer ${platformToken}` } });
+    const db = await dbRes.json();
+    const n1 = '3201100000000000';
+    const n2 = '3201100000000001';
+    if (!db.citizens) db.citizens = [];
+    if (!db.citizens.find((c) => c.nik === n1)) {
+      db.citizens.push({ id: 'sec-a', nik: n1, kk: '3201100000000011', name: 'Warga A', familyRole: 'Kepala Keluarga', gender: 'Laki-laki', birthPlace: 'Bogor', birthDate: '1990-01-01', age: 30, maritalStatus: 'Kawin', religion: 'Islam', education: 'SMA', occupation: 'Wiraswasta', dusun: 'Dusun 1', rt: '001', rw: '001', address: 'A', phone: '081200000001', aidStatus: 'Non-Penerima', verifiedDukcapil: true, bloodType: 'O', lastUpdated: new Date().toISOString().slice(0,10) });
+    }
+    if (!db.citizens.find((c) => c.nik === n2)) {
+      db.citizens.push({ id: 'sec-b', nik: n2, kk: '3201100000000022', name: 'Warga B', familyRole: 'Kepala Keluarga', gender: 'Laki-laki', birthPlace: 'Bogor', birthDate: '1990-01-01', age: 30, maritalStatus: 'Kawin', religion: 'Islam', education: 'SMA', occupation: 'Wiraswasta', dusun: 'Dusun 1', rt: '001', rw: '001', address: 'B', phone: '081200000002', aidStatus: 'Non-Penerima', verifiedDukcapil: true, bloodType: 'O', lastUpdated: new Date().toISOString().slice(0,10) });
+    }
+    if (!db.siteConfig) db.siteConfig = {};
+    if (!db.siteConfig.citizenTaxBills) db.siteConfig.citizenTaxBills = [];
+    if (!db.siteConfig.citizenTaxBills.find((b) => b.id === 'bill-sec-a')) {
+      db.siteConfig.citizenTaxBills.push({ id: 'bill-sec-a', kk: '3201100000000011', amount: 100000, status: 'Belum Lunas' });
+    }
+    if (!db.siteConfig.citizenTaxBills.find((b) => b.id === 'bill-sec-b')) {
+      db.siteConfig.citizenTaxBills.push({ id: 'bill-sec-b', kk: '3201100000000022', amount: 100000, status: 'Belum Lunas' });
+    }
+    db.version = (db.version || 1) + 1;
+    await fetch(`${BASE_URL}/api/db`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${platformToken}` }, body: JSON.stringify(db) });
+  } catch {}
+
 
   const tiers = [
     { name: 'super_admin_platform', token: platformToken, tenant: null },
@@ -164,9 +189,10 @@ async function main() {
     if (!citizenTok) throw new Error('no citizen token');
     const res = await fetch(`${BASE_URL}/api/citizen/pay-bill`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(citizenTok) },
-      body: JSON.stringify({ billId: 'bill-other-kk' }),
+      body: JSON.stringify({ billId: 'bill-sec-b' }),
     });
     if (res.status !== 404) throw new Error(`status ${res.status} (harus 404)`);
+    // ensure bill-sec-b unchanged
   });
 
   if (process.exitCode) {

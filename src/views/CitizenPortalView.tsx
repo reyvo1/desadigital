@@ -35,6 +35,7 @@ import {
   VillageAgenda,
   VillageSiteConfig,
 } from '../types/village';
+import { addFamilyMember, getBills, payBill } from '../utils/citizenApi';
 import {
   computeHouseholdDashboardSummary,
   formatWhatsAppNotification,
@@ -44,6 +45,7 @@ import {
 
 interface CitizenPortalViewProps {
   sessionUser: CitizenSessionUser;
+  token?: string;
   citizens: Citizen[];
   onUpdateCitizens: (citizens: Citizen[]) => void;
   requests: LetterRequest[];
@@ -71,6 +73,7 @@ type CitizenPortalSubTab =
 
 export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   sessionUser,
+  token,
   citizens,
   onUpdateCitizens,
   requests,
@@ -189,24 +192,19 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
       return;
     }
 
-    try {
-      const res = await fetch('/api/citizen/family-member', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kk: familyGroup.kk,
-          nik: cleanNik,
-          name: newMemberName.trim(),
-          familyRole: newMemberRole,
-          gender: newMemberGender,
-          birthPlace: newMemberBirthPlace.trim() || 'Bogor',
-          birthDate: newMemberBirthDate,
-          mutationType: newMemberMutationType,
-          phone: head.phone,
-        }),
-      });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data?.citizen) {
+    const { ok, status, data } = await addFamilyMember({
+        nik: cleanNik,
+        name: newMemberName.trim(),
+        familyRole: newMemberRole,
+        gender: newMemberGender,
+        birthPlace: newMemberBirthPlace.trim() || 'Bogor',
+        birthDate: newMemberBirthDate,
+        mutationType: newMemberMutationType,
+        phone: head.phone,
+      }, token || '');
+      if (status === 401) { setMemberFormError('Sesi berakhir, silakan masuk kembali.'); return; }
+      if (!ok) { setMemberFormError(data?.error || 'Gagal menambah anggota.'); return; }
+      if (data?.citizen) {
         onUpdateCitizens(data.citizens);
         onUpdatePopulationMutations(data.populationMutations);
         setShowAddMemberForm(false);
@@ -218,60 +216,7 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
         );
         return;
       }
-    } catch {
-      // Fallback local update below
-    }
 
-    const birthYear = Number(newMemberBirthDate.slice(0, 4)) || 2026;
-    const age = Math.max(0, new Date().getFullYear() - birthYear);
-    const createdCitizen: Citizen = {
-      id: `cit-kk-${Date.now()}`,
-      nik: cleanNik,
-      kk: familyGroup.kk,
-      name: newMemberName.trim(),
-      familyRole: newMemberRole,
-      gender: newMemberGender,
-      birthPlace: newMemberBirthPlace.trim() || 'Bogor',
-      birthDate: newMemberBirthDate,
-      age,
-      maritalStatus: newMemberRole === 'Istri' ? 'Kawin' : 'Belum Kawin',
-      religion: head.religion,
-      education: age < 6 ? 'Tidak/Belum Sekolah' : 'SMA/Sederajat',
-      occupation: age < 18 ? 'Belum / Tidak Bekerja' : 'Wiraswasta',
-      dusun: familyGroup.dusun,
-      rt: familyGroup.rt,
-      rw: familyGroup.rw,
-      address: familyGroup.address,
-      phone: head.phone,
-      aidStatus: 'Non-Penerima',
-      tpsNumber: familyGroup.tpsNumber,
-      lifeStatus: 'Hidup',
-      verifiedDukcapil: true,
-      bloodType: 'O',
-      lastUpdated: new Date().toISOString().slice(0, 10),
-    };
-
-    const createdMutation: PopulationMutationItem = {
-      id: `mut-kk-${Date.now()}`,
-      nik: cleanNik,
-      kk: familyGroup.kk,
-      citizenName: `${createdCitizen.name} (KK: ${head.name})`,
-      mutationType: newMemberMutationType,
-      date: new Date().toISOString().slice(0, 10),
-      dusun: familyGroup.dusun,
-      rtRw: `RT ${familyGroup.rt} / RW ${familyGroup.rw}`,
-      notes: `Dilaporkan mandiri melalui Portal Kepala Keluarga oleh ${head.name}.`,
-    };
-
-    onUpdateCitizens([...citizens, createdCitizen]);
-    onUpdatePopulationMutations([createdMutation, ...populationMutations]);
-    setShowAddMemberForm(false);
-    setNewMemberNik('');
-    setNewMemberName('');
-    onShowToast(
-      'Anggota Kartu Keluarga Ditambahkan!',
-      `${createdCitizen.name} berhasil ditambahkan ke KK ${familyGroup.kk}.`
-    );
   };
 
   const handleOneClickLetterSubmit = (e: React.FormEvent) => {
@@ -325,43 +270,20 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({
   };
 
   const handlePayTaxBill = async (billId: string) => {
-    try {
-      const res = await fetch('/api/citizen/pay-bill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ billId, kk: familyGroup.kk }),
+    const { ok, status, data } = await payBill(billId, token || '');
+    if (status === 401) { onShowToast('Sesi berakhir', 'Silakan masuk kembali.'); return; }
+    if (status === 409) { onShowToast('Tagihan sudah lunas', 'Tagihan ini sudah dibayar.'); return; }
+    if (status === 503 || !ok) { onShowToast('Layanan tidak tersedia', 'Coba lagi nanti.'); return; }
+    // reload bills from server
+    const billsRes = await getBills(token || '');
+    if (billsRes.ok && billsRes.data?.bills) {
+      const updated = (siteConfig.citizenTaxBills || []).map((b: any) => {
+        const serverBill = billsRes.data.bills.find((x: any) => x.id === b.id);
+        return serverBill ? { ...b, ...serverBill } : b;
       });
-      const data = await res.json().catch(() => null);
-      if (res.ok && data?.citizenTaxBills) {
-        onUpdateSiteConfig({
-          ...siteConfig,
-          citizenTaxBills: data.citizenTaxBills,
-        });
-        onShowToast(
-          'Pembayaran Tagihan Berhasil!',
-          `Bukti lunas digital (${data.bill?.receiptCode}) telah diterbitkan untuk KK ${familyGroup.kk}.`
-        );
-        return;
-      }
-    } catch {
-      // Fallback local update
+      onUpdateSiteConfig({ ...siteConfig, citizenTaxBills: updated });
     }
-
-    const receiptCode = `KWT-DESA-${Date.now().toString().slice(-6)}`;
-    const nowStr = new Date().toISOString().slice(0, 16).replace('T', ' ');
-    const updatedBills = (siteConfig.citizenTaxBills || []).map((b: any) =>
-      b.id === billId
-        ? { ...b, status: 'Lunas' as const, paidAt: nowStr, receiptCode }
-        : b
-    );
-    onUpdateSiteConfig({
-      ...siteConfig,
-      citizenTaxBills: updatedBills,
-    });
-    onShowToast(
-      'Pembayaran Tagihan Berhasil!',
-      `Bukti lunas digital (${receiptCode}) telah diterbitkan untuk KK ${familyGroup.kk}.`
-    );
+    onShowToast('Pembayaran dicatat', 'Menunggu konfirmasi petugas.');
   };
 
   const handleSubmitHouseholdAspiration = (e: React.FormEvent) => {

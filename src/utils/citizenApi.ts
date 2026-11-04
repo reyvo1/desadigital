@@ -20,3 +20,12 @@ export async function addFamilyMember(payload: any, token: string) {
   try { data = await res.json(); } catch {}
   return { ok: res.ok, status: res.status, data };
 }
+
+export async function getBills(token: string) {
+  const res = await fetch('/api/citizen/bills', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  let data: any = {};
+  try { data = await res.json(); } catch {}
+  return { ok: res.ok, status: res.status, data };
+}

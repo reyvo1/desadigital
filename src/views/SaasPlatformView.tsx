@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { getBilling } from '../utils/saasApi';
 
 interface SaasPlatformViewProps {
+  token?: string;
   siteConfig?: any;
   onUpdateSiteConfig?: (config: any) => void;
   onShowToast?: (title: string, message: string) => void;
   onNavigateHome?: () => void;
 }
 
-export const SaasPlatformView: React.FC<SaasPlatformViewProps> = ({ onShowToast }) => {
+export const SaasPlatformView: React.FC<SaasPlatformViewProps> = ({ token, onShowToast }) => {
   const [plans, setPlans] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('pro_digital');
@@ -15,9 +17,11 @@ export const SaasPlatformView: React.FC<SaasPlatformViewProps> = ({ onShowToast 
   const [discountPercent, setDiscountPercent] = useState<number>(0);
 
   useEffect(() => {
-    fetch('/api/saas/billing')
-      .then((r) => r.json())
-      .then((d) => {
+    if (!token) { onShowToast?.('Error', 'Sesi admin diperlukan.'); return; }
+    getBilling(token)
+      .then((r) => {
+        if (!r.ok) { onShowToast?.('Error', 'Gagal memuat billing SaaS.'); return; }
+        const d = r.data || {};
         setPlans(d.plans || []);
         setInvoices(d.invoices || []);
         if (d.plans && d.plans.length > 0 && !d.plans.find((p: any) => p.id === selectedPlanId)) {
@@ -25,7 +29,7 @@ export const SaasPlatformView: React.FC<SaasPlatformViewProps> = ({ onShowToast 
         }
       })
       .catch(() => onShowToast?.('Error', 'Gagal memuat billing SaaS'));
-  }, [onShowToast, selectedPlanId]);
+  }, [token, onShowToast, selectedPlanId]);
 
   const selectedPlan = useMemo(
     () => plans.find((p: any) => p.id === selectedPlanId) || plans[0],

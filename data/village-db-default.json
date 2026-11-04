@@ -1,6 +1,6 @@
 {
   "version": 108,
-  "lastUpdated": "2026-11-04T06:00:32.583Z",
+  "lastUpdated": "2026-11-04T06:21:11.916Z",
   "siteConfig": {
     "villageName": "Desa Sukamaju",
     "subDistrict": "Kecamatan Megamendung",
@@ -34780,6 +34780,56 @@
   ],
   "auditLogs": [
     {
+      "id": "audit-1793773271916-st9v",
+      "timestamp": "2026-11-04T06:21:11.916Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "subscription_update",
+      "module": "Keamanan",
+      "encryptionHash": "4c9050d90d3d94f62f99cfedf9b9c2a23dafedd48f4839774dcadadde0745b16",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773271238-676h",
+      "timestamp": "2026-11-04T06:21:11.238Z",
+      "actor": "pelayanan",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "da2b4ae4259cedb8a74d57e1145282fccaae7ffffcf7771d0f5c5eb30255d25e",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773270941-4m6y",
+      "timestamp": "2026-11-04T06:21:10.941Z",
+      "actor": "kades",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "0e69a7a835afb85eb0b5af7874e861a2d3a918468ee5aab7c5681691372ff5d0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773270715-duef",
+      "timestamp": "2026-11-04T06:21:10.715Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
+      "id": "audit-1793773270589-tjjl",
+      "timestamp": "2026-11-04T06:21:10.589Z",
+      "actor": "admin",
+      "role": "system",
+      "action": "login",
+      "module": "Keamanan",
+      "encryptionHash": "4d14f2cb4266d4ec94b923246960a26ca9e7455a21ef8ee42512c3627d1276b0",
+      "status": "Sukses"
+    },
+    {
       "id": "audit-1793772028984-rnqx",
       "timestamp": "2026-11-04T06:00:28.984Z",
       "actor": "admin",
@@ -35242,6 +35292,17 @@
       "senderRole": "citizen",
       "channel": "web",
       "timestamp": "2026-11-04 14:00",
+      "isRead": false
+    },
+    {
+      "id": "chat-1793773271722-j0n5",
+      "sessionId": "sess-ad5250205a1350a7b2210aee233e1692",
+      "senderName": "Warga Desa",
+      "senderPhone": "-",
+      "senderRole": "citizen",
+      "channel": "web",
+      "message": "tes",
+      "timestamp": "2026-11-04 14:21",
       "isRead": false
     }
   ],

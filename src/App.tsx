@@ -934,6 +934,7 @@ const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
           <Suspense fallback={<div className="text-xs text-gray-500 p-4">Memuat...</div>}>
             {citizenUser ? (
               <CitizenPortalView
+                token={citizenToken}
                 sessionUser={{
                   nik: citizenUser.nik,
                   name: citizenUser.name,
@@ -980,6 +981,7 @@ const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
               onShowToast={(title, msg) => showToast(title, msg, 'success')}
             />
             <SaasPlatformView
+              token={adminToken}
               siteConfig={siteConfig}
               onUpdateSiteConfig={setSiteConfig}
               onShowToast={(title, msg) => showToast(title, msg, 'success')}
