@@ -1772,7 +1772,16 @@ async function startServer() {
     if (!citizen) return res.status(404).json({ status: 'error', error: 'Data warga tidak ditemukan.' });
     const otp = String(crypto.randomInt(100000, 1000000));
     citizenOtpStore.set(nik, { otp, expires: Date.now() + 5 * 60 * 1000, attempts: 0 });
-    res.json({ status: 'ok', message: 'OTP dikirim (dev: lihat otp).', ...(process.env.NODE_ENV !== 'production' ? { otp } : {}) });
+    const tenantId = tenantStorage.getStore() || 'default';
+    if (pgAdapter) {
+      try {
+        await pgAdapter.query(
+          `INSERT INTO notification_outbox (tenant_id, channel, recipient, subject, message, status) VALUES ($1,'whatsapp',$2,NULL,$3,'pending')`,
+          [tenantId, citizen.phone || '', `Kode OTP login warga: ${otp} (berlaku 5 menit)`]
+        );
+      } catch {}
+    }
+    res.json({ status: 'ok', message: 'OTP dikirim lewat outbox notifikasi.', ...(process.env.NODE_ENV !== 'production' ? { otp } : {}) });
   });
 
   app.post('/api/citizen/otp/verify', loginRateLimiter, async (req, res) => {
@@ -1999,6 +2008,10 @@ async function startServer() {
       return;
     }
     const kk = String(requester.kk || '').trim();
+    if (!/^\d{16}$/.test(kk)) {
+      res.status(400).json({ status: 'error', error: 'Nomor KK warga tidak valid.' });
+      return;
+    }
     const billId = String(req.body?.billId || '').trim();
     if (!billId) {
       res.status(400).json({ status: 'error', error: 'ID tagihan wajib diisi.' });
@@ -2007,28 +2020,26 @@ async function startServer() {
 
     const db = await ensureDatabase();
     const bills = (db.siteConfig as any).citizenTaxBills || [];
-    const targetIdx = bills.findIndex((b: any) => b.id === billId && (!kk || b.kk === kk));
+    const targetIdx = bills.findIndex((b: any) => b.id === billId && b.kk === kk);
     if (targetIdx === -1) {
       res.status(404).json({ status: 'error', error: 'Tagihan pajak/retribusi tidak ditemukan.' });
       return;
     }
 
-    const paidAt = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' WIB';
-    const receiptCode = `KWT-DESA-${Date.now().toString().slice(-6)}`;
-    bills[targetIdx] = {
-      ...bills[targetIdx],
-      status: 'Lunas',
-      paidAt,
-      receiptCode,
-    };
-    (db.siteConfig as any).citizenTaxBills = [...bills];
-    db.version = (db.version || 8) + 1;
-    await saveDatabase(db, 'siteConfig');
+    const tenantId = tenantStorage.getStore() || 'default';
+    const amount = Number(bills[targetIdx].amount || bills[targetIdx].total || 0);
+    if (pgAdapter) {
+      await pgAdapter.query(
+        `INSERT INTO payment_transactions (tenant_id, plan, amount, currency, provider, status)
+         VALUES ($1,$2,$3,'IDR','mock','pending')`,
+        [tenantId, `citizen-bill:${billId}`, amount]
+      );
+    }
 
     res.json({
       status: 'ok',
+      message: 'Pembayaran dicatat sebagai pending. Menunggu konfirmasi payment_transactions.',
       bill: bills[targetIdx],
-      citizenTaxBills: (db.siteConfig as any).citizenTaxBills,
     });
   });
 
@@ -4313,13 +4324,12 @@ app.post('/api/chat', strictRateLimiter(20), async (req, res) => {
     }
   });
 
-  app.get('/api/saas/billing', async (req, res) => {
-    const tenantIdFilter = req.query?.tenantId ? String(req.query.tenantId).trim() : undefined;
+  app.get('/api/saas/billing', requirePlatformAdmin, async (req, res) => {
     if (!pgAdapter) { res.json({ status: 'ok', plans: [], subscriptions: [], invoices: [] }); return; }
     try {
       const plansRes = await pgAdapter.query<any>('SELECT * FROM saas_plans ORDER BY annual_price_rupiah ASC;').catch(() => ({ rows: [] }));
-      const subsRes = await pgAdapter.query<any>(tenantIdFilter ? 'SELECT * FROM saas_subscriptions WHERE tenant_id = $1 ORDER BY created_at DESC;' : 'SELECT * FROM saas_subscriptions ORDER BY created_at DESC;', tenantIdFilter ? [tenantIdFilter] : []).catch(() => ({ rows: [] }));
-      const invRes = await pgAdapter.query<any>(tenantIdFilter ? 'SELECT * FROM saas_invoices WHERE tenant_id = $1 ORDER BY created_at DESC;' : 'SELECT * FROM saas_invoices ORDER BY created_at DESC;', tenantIdFilter ? [tenantIdFilter] : []).catch(() => ({ rows: [] }));
+      const subsRes = await pgAdapter.query<any>('SELECT * FROM saas_subscriptions ORDER BY created_at DESC;').catch(() => ({ rows: [] }));
+      const invRes = await pgAdapter.query<any>('SELECT * FROM saas_invoices ORDER BY created_at DESC;').catch(() => ({ rows: [] }));
       res.json({ status: 'ok', plans: plansRes.rows, subscriptions: subsRes.rows, invoices: invRes.rows });
     } catch (error: any) {
       res.status(500).json({ status: 'error', error: error.message || 'Gagal memuat billing.' });

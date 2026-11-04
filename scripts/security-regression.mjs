@@ -122,6 +122,53 @@ async function main() {
     }
   }
 
+  // Citizen token (seeded citizen)
+  let citizenTok = null;
+  try {
+    const r1 = await fetch(`${BASE_URL}/api/citizen/otp/request`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nik: '3201100000000000' }),
+    });
+    const d1 = await r1.json();
+    const r2 = await fetch(`${BASE_URL}/api/citizen/otp/verify`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nik: '3201100000000000', otp: d1.otp }),
+    });
+    citizenTok = (await r2.json()).token;
+  } catch {}
+
+  // SaaS billing guarded
+  await check('/api/saas/billing tanpa token -> 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/saas/billing`);
+    if (res.status !== 401) throw new Error(`status ${res.status} (harus 401)`);
+  });
+  await check('/api/saas/billing tenant token -> 403', async () => {
+    const res = await fetch(`${BASE_URL}/api/saas/billing`, { headers: authHeaders(tenantToken) });
+    if (res.status !== 403) throw new Error(`status ${res.status} (harus 403)`);
+  });
+  await check('/api/saas/invoices/:id/pay tanpa token -> 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/saas/invoices/inv-2026-004/pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (res.status !== 401) throw new Error(`status ${res.status} (harus 401)`);
+  });
+
+  // Citizen endpoints
+  await check('/api/citizen/family-member tanpa token -> 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/citizen/family-member`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (res.status !== 401) throw new Error(`status ${res.status} (harus 401)`);
+  });
+  await check('/api/citizen/pay-bill tanpa token -> 401', async () => {
+    const res = await fetch(`${BASE_URL}/api/citizen/pay-bill`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (res.status !== 401) throw new Error(`status ${res.status} (harus 401)`);
+  });
+  await check('warga tidak bisa bayar tagihan KK lain -> 404', async () => {
+    if (!citizenTok) throw new Error('no citizen token');
+    const res = await fetch(`${BASE_URL}/api/citizen/pay-bill`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(citizenTok) },
+      body: JSON.stringify({ billId: 'bill-other-kk' }),
+    });
+    if (res.status !== 404) throw new Error(`status ${res.status} (harus 404)`);
+  });
+
   if (process.exitCode) {
     console.error('Security regression: GAGAL');
   } else {
