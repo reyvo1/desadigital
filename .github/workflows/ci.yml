@@ -9,6 +9,27 @@ on:
 jobs:
   uat:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: desa_user
+          POSTGRES_PASSWORD: desa_pass
+          POSTGRES_DB: desa_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U desa_user -d desa_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      NODE_ENV: development
+      DATABASE_URL: postgres://desa_user:desa_pass@localhost:5432/desa_db
+      APP_URL: http://127.0.0.1:3000
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
