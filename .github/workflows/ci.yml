@@ -65,6 +65,9 @@ jobs:
       - name: Security regression
         run: npm run security
 
+      - name: Full UAT simulation
+        run: npm run uat:full
+
       - name: Build
         run: npm run build
 

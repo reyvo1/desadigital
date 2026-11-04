@@ -16,6 +16,7 @@
     "security": "node scripts/security-regression.mjs",
     "uat": "npm run lint && npm test && npm run build",
     "uat:server": "npm run dev & sleep 15 && npm run smoke && npm run security",
+    "uat:full": "node scripts/uat-full.mjs",
     "migrate:pg": "tsx scripts/migrate-to-pg.mjs"
   },
   "dependencies": {
